@@ -1,0 +1,69 @@
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          { "key": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains; preload" },
+          { "key": "X-Content-Type-Options", "value": "nosniff" },
+          { "key": "X-Frame-Options", "value": "DENY" },
+          { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+          { "key": "Permissions-Policy", "value": "camera=(self), geolocation=(self), microphone=()" }
+        ]
+      },
+      {
+        "source": "index.html",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate, max-age=0" }
+        ]
+      },
+      {
+        "source": "flutter_service_worker.js",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate, max-age=0" }
+        ]
+      },
+      {
+        "source": "version.json",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate, max-age=0" }
+        ]
+      }
+    ]
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "motoconnect-c3412",
+          "appId": "1:331540286697:android:07b80248b67312b0c07478",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "motoconnect-c3412",
+          "configurations": {
+            "android": "1:331540286697:android:07b80248b67312b0c07478",
+            "ios": "1:331540286697:ios:067c4eed59df3be3c07478",
+            "macos": "1:331540286697:ios:067c4eed59df3be3c07478",
+            "web": "1:331540286697:web:9caf383466ade098c07478",
+            "windows": "1:331540286697:web:c2987a025dba4ec1c07478"
+          }
+        }
+      }
+    }
+  }
+}
