@@ -66,7 +66,8 @@ class RideEvent {
 
   double distanceFrom(LatLng userPos) {
     const Distance distance = Distance();
-    return distance.as(LengthUnit.Kilometer, userPos, startPoint);
+    final double meters = distance.as(LengthUnit.Meter, userPos, startPoint).toDouble();
+    return meters / 1000.0;
   }
 
   Map<String, dynamic> toMap() {

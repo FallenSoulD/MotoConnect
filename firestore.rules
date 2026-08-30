@@ -33,7 +33,8 @@ service cloud.firestore {
     match /rides/{rideId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
-      allow update, delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow update: if isAuthenticated(); // Katılım (participantIds) için herkes güncelleyebilir
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.creatorId;
     }
 
     // 4. CANLI GAZLAMA ODALARI (lobbies)

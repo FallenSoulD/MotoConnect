@@ -41,7 +41,7 @@ class CreateRideSheet {
     }
 
     final baslikController = TextEditingController();
-    final tarihController = TextEditingController(text: "Hafta Sonu, 09:30");
+    final tarihController = TextEditingController();
     final bulusmaController = TextEditingController();
     final varisController = TextEditingController();
     String seciliTempo = "Sakin & Manzaralı";
@@ -495,11 +495,59 @@ class CreateRideSheet {
                         prefixIcon: Icons.title,
                       ),
                       const SizedBox(height: 12),
-                      NeuTextField(
-                        controller: tarihController,
-                        labelText: 'Tarih ve Saat',
-                        hintText: 'Örn: Pazar, 09:30',
-                        prefixIcon: Icons.access_time,
+                      GestureDetector(
+                        onTap: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: DateTime.now(),
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime.now().add(const Duration(days: 30)),
+                            builder: (context, child) {
+                              return Theme(
+                                data: ThemeData.dark().copyWith(
+                                  colorScheme: const ColorScheme.dark(
+                                    primary: NeuColors.accentOrange,
+                                    onPrimary: Colors.white,
+                                    surface: NeuColors.surfaceDark,
+                                    onSurface: Colors.white,
+                                  ),
+                                ),
+                                child: child!,
+                              );
+                            },
+                          );
+                          if (date != null && context.mounted) {
+                            final time = await showTimePicker(
+                              context: context,
+                              initialTime: TimeOfDay.now(),
+                              builder: (context, child) {
+                                return Theme(
+                                  data: ThemeData.dark().copyWith(
+                                    colorScheme: const ColorScheme.dark(
+                                      primary: NeuColors.accentOrange,
+                                      onPrimary: Colors.white,
+                                      surface: NeuColors.surfaceDark,
+                                      onSurface: Colors.white,
+                                    ),
+                                  ),
+                                  child: child!,
+                                );
+                              },
+                            );
+                            if (time != null) {
+                              final formattedDate = "${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year} ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}";
+                              tarihController.text = formattedDate;
+                            }
+                          }
+                        },
+                        child: AbsorbPointer(
+                          child: NeuTextField(
+                            controller: tarihController,
+                            labelText: 'Tarih ve Saat Seç (Dokun)',
+                            hintText: 'Takvimden seçmek için dokunun...',
+                            prefixIcon: Icons.calendar_month,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 14),
 

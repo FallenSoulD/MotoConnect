@@ -8,6 +8,7 @@ import '../../models/sos_model.dart';
 import '../../services/firestore_service.dart';
 import '../../widgets/pulse_marker.dart';
 import '../../widgets/moto_weather_bar.dart';
+import '../../services/weather_service.dart';
 import 'crossed_paths_screen.dart';
 import '../../models/crossed_path_model.dart';
 import 'sos_sheet.dart';
@@ -39,6 +40,10 @@ class _RadarScreenState extends State<RadarScreen> {
   final Set<String> _recordedCrossedPaths = {};
   DateTime? _lastCrossedPathCheckTime;
 
+  // New features
+  double _currentSpeedKmH = 0.0;
+  Timer? _weatherDebounce;
+
   @override
   void initState() {
     super.initState();
@@ -49,6 +54,7 @@ class _RadarScreenState extends State<RadarScreen> {
   @override
   void dispose() {
     _gpsStreamSub?.cancel();
+    _weatherDebounce?.cancel();
     super.dispose();
   }
 
@@ -118,11 +124,12 @@ class _RadarScreenState extends State<RadarScreen> {
     if (!mounted) return;
     final double speedKmH = (position.speed * 3.6).clamp(0.0, 300.0);
     setState(() {
+      _currentSpeedKmH = speedKmH;
       _benimKonumum = LatLng(position.latitude, position.longitude);
       widget.aktifKullanici.latitude = position.latitude;
       widget.aktifKullanici.longitude = position.longitude;
       _gpsAktif = true;
-      _gpsDurumMesaji = "Canlı 360 GPS Aktif (${speedKmH.toStringAsFixed(0)} km/s) 🟢";
+      _gpsDurumMesaji = "Canlı 360 GPS Aktif 🟢";
     });
 
     if (_isMapReady && !_isFirstLocationCentered) {
@@ -342,8 +349,20 @@ class _RadarScreenState extends State<RadarScreen> {
                         _mapController.move(_benimKonumum, 14.5);
                       }
                     },
+                    onPositionChanged: (MapCamera position, bool hasGesture) {
+                      if (hasGesture) {
+                        if (_weatherDebounce?.isActive ?? false) _weatherDebounce!.cancel();
+                        _weatherDebounce = Timer(const Duration(milliseconds: 1500), () {
+                          // Kullanıcı haritayı kaydırdıktan 1.5 saniye sonra o noktanın havasını çek
+                          MotoWeatherService().fetchWeather(
+                            lat: position.center.latitude,
+                            lng: position.center.longitude,
+                          );
+                        });
+                      }
+                    },
                     interactionOptions: const InteractionOptions(
-                      flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                      flags: InteractiveFlag.all, // Rotate aktif
                     ),
                   ),
                   children: [
@@ -486,6 +505,55 @@ class _RadarScreenState extends State<RadarScreen> {
                   ),
                 ),
 
+                // SOL ORTA: HIZ GÖSTERGESİ (SPEEDOMETER)
+                Positioned(
+                  bottom: 120,
+                  left: 16,
+                  child: Container(
+                    width: 70,
+                    height: 70,
+                    decoration: BoxDecoration(
+                      color: NeuColors.surfaceDark.withValues(alpha: 0.9),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: _currentSpeedKmH > 100 ? Colors.redAccent : (_currentSpeedKmH > 50 ? Colors.amber : NeuColors.accentGreen),
+                        width: 3,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _currentSpeedKmH > 100 ? Colors.redAccent.withValues(alpha: 0.5) : Colors.black54,
+                          blurRadius: 10,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _currentSpeedKmH.toStringAsFixed(0),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w900,
+                            shadows: [
+                              Shadow(color: _currentSpeedKmH > 100 ? Colors.redAccent : Colors.black, blurRadius: 4),
+                            ],
+                          ),
+                        ),
+                        const Text(
+                          "km/s",
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
                 // SOL ALT: HARİTADAN DOĞRUDAN S.O.S. ACİL YARDIM ÇAĞRISI BUTONU
                   Positioned(
                     bottom: 24,
@@ -532,6 +600,18 @@ class _RadarScreenState extends State<RadarScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      NeuIconButton(
+                        icon: Icons.explore_outlined,
+                        iconColor: Colors.white,
+                        color: Colors.blueAccent.withValues(alpha: 0.7),
+                        size: 42,
+                        iconSize: 20,
+                        tooltip: "Pusula Sıfırla",
+                        onPressed: () {
+                          _mapController.rotate(0.0);
+                        },
+                      ),
+                      const SizedBox(height: 12),
                       NeuIconButton(
                         icon: Icons.sports_motorsports,
                         iconColor: Colors.white,

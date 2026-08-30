@@ -8,6 +8,7 @@ import '../../services/firestore_service.dart';
 import '../../widgets/neumorphic_widgets.dart';
 import 'dart:async';
 import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class RouteDetailScreen extends StatefulWidget {
   final RideEvent ride;
@@ -432,28 +433,53 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                     ],
                   ),
                   const SizedBox(height: 18),
-                  NeuButton(
-                    text: _joined ? "Sürüşten Ayrıl" : "Katıl",
-                    icon: _joined ? Icons.exit_to_app : Icons.add_circle_outline,
-                    color: _joined ? Colors.red[900] : NeuColors.accentOrange,
-                    isPrimary: !_joined,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    onPressed: () async {
-                      setState(() => _joined = !_joined);
-                      await FirestoreService().toggleJoinRide(
-                        widget.ride.id,
-                        widget.currentUser.id,
-                        _joined,
-                      );
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(_joined ? "Sürüşe katıldın! 🚀" : "Sürüşten ayrıldın."),
-                          backgroundColor: _joined ? Colors.green : Colors.redAccent,
-                          duration: const Duration(seconds: 1),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: NeuButton(
+                          text: "Yol Tarifi",
+                          icon: Icons.navigation_rounded,
+                          color: Colors.blue[800],
+                          isPrimary: true,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          onPressed: () async {
+                            final String googleMapsUrl = "https://www.google.com/maps/dir/?api=1&destination=${Uri.encodeComponent(widget.ride.meetingPoint)}";
+                            if (await canLaunchUrl(Uri.parse(googleMapsUrl))) {
+                              await launchUrl(Uri.parse(googleMapsUrl), mode: LaunchMode.externalApplication);
+                            } else {
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Harita uygulaması açılamadı.")));
+                            }
+                          },
                         ),
-                      );
-                    },
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: NeuButton(
+                          text: _joined ? "Ayrıl" : "Katıl",
+                          icon: _joined ? Icons.exit_to_app : Icons.add_circle_outline,
+                          color: _joined ? Colors.red[900] : NeuColors.accentOrange,
+                          isPrimary: !_joined,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          onPressed: () async {
+                            setState(() => _joined = !_joined);
+                            await FirestoreService().toggleJoinRide(
+                              widget.ride.id,
+                              widget.currentUser.id,
+                              _joined,
+                            );
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(_joined ? "Sürüşe katıldın! 🚀" : "Sürüşten ayrıldın."),
+                                backgroundColor: _joined ? Colors.green : Colors.redAccent,
+                                duration: const Duration(seconds: 1),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
