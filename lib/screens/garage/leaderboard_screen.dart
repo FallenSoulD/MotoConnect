@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../models/user_model.dart';
 import '../../models/badge_model.dart';
 import '../../services/firestore_service.dart';
 import '../../widgets/neumorphic_widgets.dart';
+import '../../widgets/native_ad_widget.dart';
 import '../../services/ad_helper.dart';
 
 class LeaderboardScreen extends StatefulWidget {
@@ -146,6 +148,15 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   ),
                 ],
               ),
+            ),
+
+            const SizedBox(height: 18),
+            
+            // LİDERLİK TABLOSU ALTINDA NATIVE REKLAM
+            NativeAdWidget(
+              currentUser: widget.currentUser,
+              templateType: TemplateType.small,
+              height: 120,
             ),
 
             const SizedBox(height: 18),

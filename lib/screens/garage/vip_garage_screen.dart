@@ -171,7 +171,6 @@ class _VipGarajEkraniState extends State<VipGarajEkrani> {
                   const SizedBox(height: 20),
 
                   // VIP AYRICALIKLAR LİSTESİ
-                  _buildNeuBenefit(Icons.radar, "30 KM Canlı Radar Menzili", "30 km boyunca çevrendeki tüm motorcuları gör."),
                   if (!config.isUnlimitedSwipeFree)
                     _buildNeuBenefit(Icons.style, "Sınırsız Swipe & Eşleşme", "Günlük beğeni sınırlarına takılmadan motorcuları keşfet."),
                   _buildNeuBenefit(Icons.favorite, "Seni Beğenenleri Gör", "Kimlerin sana selektör attığını anında öğren."),

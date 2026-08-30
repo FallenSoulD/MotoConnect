@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:latlong2/latlong.dart';
 import '../config/admin_config.dart';
 
+/// [Motorcycle]
+/// Kullanıcının motosiklet bilgilerini (Marka, Model, CC, Tip) tutan veri yapısı.
 class Motorcycle {
   final String brand;
   final String model;
@@ -56,6 +58,7 @@ class MotoUser {
   String locationName;
   bool isOnline;
   bool isVerified;
+  DateTime? lastActiveAt;
   String favoriteTrack;
   String exhaustSoundName;
   String favoriteRoute;
@@ -64,6 +67,7 @@ class MotoUser {
   bool isBoosted;
   DateTime? boostExpiresAt;
   List<String> blockedUserIds;
+  List<String> passedUserIds;
   bool isBanned;
   int warnings;
   double maxLeanAngleLeft;
@@ -94,6 +98,7 @@ class MotoUser {
     this.locationName = "Kadıköy",
     this.isOnline = true,
     this.isVerified = false,
+    this.lastActiveAt,
     this.favoriteTrack = "The Prodigy - Voodoo People",
     this.exhaustSoundName = "Akrapovič Racing 🔊",
     this.favoriteRoute = "Şile & Darlık Barajı Virajları",
@@ -102,6 +107,7 @@ class MotoUser {
     this.isBoosted = false,
     this.boostExpiresAt,
     List<String>? blockedUserIds,
+    List<String>? passedUserIds,
     this.isBanned = false,
     this.warnings = 0,
     this.maxLeanAngleLeft = 0.0,
@@ -111,7 +117,8 @@ class MotoUser {
     this.telemetryRidesCount = 0,
   })  : imageUrls = imageUrls ?? [],
         hobbies = hobbies ?? ["☕ Gece Kahvesi", "🎧 Intercom Muhabbeti", "🛠️ Kendim Bakım Yaparım"],
-        blockedUserIds = blockedUserIds ?? [];
+        blockedUserIds = blockedUserIds ?? [],
+        passedUserIds = passedUserIds ?? [];
 
   double get maxLeanAngle => maxLeanAngleLeft > maxLeanAngleRight ? maxLeanAngleLeft : maxLeanAngleRight;
 
@@ -119,6 +126,12 @@ class MotoUser {
   String get primaryMotor => garage.isNotEmpty ? "${garage[0].brand} ${garage[0].model}" : "Motosiklet Yok";
   String get primaryMotorType => garage.isNotEmpty ? garage[0].type : "Naked";
   bool get isAdmin => AdminConfig.isAdmin(email);
+
+  bool get isInactive {
+    if (lastActiveAt == null) return false; // Verisi olmayanlar geçici olarak aktif sayılır
+    // 6 ay (yaklaşık 180 gün) boyunca giriş yapmayanlar inaktif kabul edilir
+    return DateTime.now().difference(lastActiveAt!).inDays > 180;
+  }
 
   // Fotoğraf ekleme fonksiyonu (Ücretsiz kullanıcılara 4 sınırını koyar)
   bool addPhoto(String path) {
@@ -164,10 +177,17 @@ class MotoUser {
   }
 
   bool isUserBlocked(String userId) => blockedUserIds.contains(userId);
+  bool isUserPassed(String userId) => passedUserIds.contains(userId);
 
   void blockUser(String userId) {
     if (!blockedUserIds.contains(userId)) {
       blockedUserIds.add(userId);
+    }
+  }
+
+  void passUser(String userId) {
+    if (!passedUserIds.contains(userId)) {
+      passedUserIds.add(userId);
     }
   }
 
@@ -197,6 +217,7 @@ class MotoUser {
       'locationName': locationName,
       'isOnline': isOnline,
       'isVerified': isVerified,
+      'lastActiveAt': lastActiveAt != null ? Timestamp.fromDate(lastActiveAt!) : null,
       'favoriteTrack': favoriteTrack,
       'exhaustSoundName': exhaustSoundName,
       'favoriteRoute': favoriteRoute,
@@ -205,6 +226,7 @@ class MotoUser {
       'isBoosted': isBoosted,
       'boostExpiresAt': boostExpiresAt != null ? Timestamp.fromDate(boostExpiresAt!) : null,
       'blockedUserIds': blockedUserIds,
+      'passedUserIds': passedUserIds,
       'isBanned': isBanned,
       'warnings': warnings,
       'maxLeanAngleLeft': maxLeanAngleLeft,
@@ -236,6 +258,13 @@ class MotoUser {
       subEndTime = DateTime.tryParse(map['subscriptionEndDate']);
     }
 
+    DateTime? lastActiveTime;
+    if (map['lastActiveAt'] is Timestamp) {
+      lastActiveTime = (map['lastActiveAt'] as Timestamp).toDate();
+    } else if (map['lastActiveAt'] is String) {
+      lastActiveTime = DateTime.tryParse(map['lastActiveAt']);
+    }
+
     // Check if subscription has expired
     bool isSubActive = map['isPremium'] ?? false;
     if (subEndTime != null && DateTime.now().isAfter(subEndTime)) {
@@ -261,9 +290,10 @@ class MotoUser {
       superLikesLeft: (map['superLikesLeft'] as num?)?.toInt() ?? 1,
       latitude: (map['latitude'] as num?)?.toDouble() ?? 40.986,
       longitude: (map['longitude'] as num?)?.toDouble() ?? 29.026,
-      locationName: map['locationName'] ?? 'Kadıköy',
-      isOnline: map['isOnline'] ?? true,
+      locationName: map['locationName'] ?? 'Bilinmiyor',
+      isOnline: map['isOnline'] ?? false,
       isVerified: map['isVerified'] ?? false,
+      lastActiveAt: lastActiveTime,
       favoriteTrack: map['favoriteTrack'] ?? "The Prodigy - Voodoo People",
       exhaustSoundName: map['exhaustSoundName'] ?? "Akrapovič Racing 🔊",
       favoriteRoute: map['favoriteRoute'] ?? "Şile & Darlık Barajı Virajları",
@@ -272,6 +302,7 @@ class MotoUser {
       isBoosted: map['isBoosted'] ?? false,
       boostExpiresAt: boostTime,
       blockedUserIds: List<String>.from(map['blockedUserIds'] ?? []),
+      passedUserIds: List<String>.from(map['passedUserIds'] ?? []),
       isBanned: map['isBanned'] ?? false,
       warnings: (map['warnings'] as num?)?.toInt() ?? 0,
       maxLeanAngleLeft: (map['maxLeanAngleLeft'] as num?)?.toDouble() ?? 0.0,

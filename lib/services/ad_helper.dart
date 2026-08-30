@@ -25,6 +25,16 @@ class AdHelper {
     return '';
   }
 
+  static String get nativeAdUnitId {
+    if (kIsWeb) return '';
+    if (Platform.isAndroid) {
+      return 'ca-app-pub-3940256099942544/2247696110'; // Test Native Advanced
+    } else if (Platform.isIOS) {
+      return 'ca-app-pub-3940256099942544/3986624511';
+    }
+    return '';
+  }
+
   static Future<void> initialize() async {
     if (kIsWeb) return;
     await MobileAds.instance.initialize();

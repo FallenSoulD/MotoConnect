@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../widgets/neumorphic_widgets.dart';
 
 enum LegalDocType { privacyPolicy, termsOfService }
@@ -15,6 +16,13 @@ class LegalDocsSheet extends StatelessWidget {
       backgroundColor: Colors.transparent,
       builder: (ctx) => LegalDocsSheet(docType: docType),
     );
+  }
+
+  Future<void> _launchPrivacyUrl() async {
+    final url = Uri.parse("https://sites.google.com/view/motoconnecthq");
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      debugPrint("Web sitesi açılamadı.");
+    }
   }
 
   @override
@@ -80,6 +88,17 @@ class LegalDocsSheet extends StatelessWidget {
                 ],
               ),
               const Divider(height: 24),
+              
+              if (isPrivacy)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: NeuButton(
+                    color: NeuColors.accentOrange,
+                    textColor: Colors.black,
+                    text: "Resmi Web Sitemizde Oku",
+                    onPressed: _launchPrivacyUrl,
+                  ),
+                ),
 
               // Doküman İçeriği
               Expanded(

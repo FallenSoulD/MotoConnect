@@ -111,9 +111,28 @@ class _LikesYouScreenState extends State<LikesYouScreen> {
                 ),
               ),
               const SizedBox(height: 10),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text("Turlamaya Devam Et", style: TextStyle(color: Colors.white54)),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () {
+                        widget.currentUser.blockUser(matchedRider.id);
+                        FirestoreService().blockUser(widget.currentUser.id, matchedRider.id);
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Kullanıcı gizlendi."), backgroundColor: Colors.redAccent),
+                        );
+                      },
+                      child: const Text("Reddet (Gizle)", style: TextStyle(color: Colors.redAccent)),
+                    ),
+                  ),
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text("Daha Sonra", style: TextStyle(color: Colors.white54)),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -172,7 +191,13 @@ class _LikesYouScreenState extends State<LikesYouScreen> {
             return const Center(child: CircularProgressIndicator(color: Colors.deepOrange));
           }
 
-          final signals = snapshot.data ?? [];
+          var signals = snapshot.data ?? [];
+          
+          // Filtreleme: Yalnızca engellenenleri gizle (Swipe'ta pass edilenler burada görünmeye devam eder)
+          signals = signals.where((signal) {
+            final senderId = signal['fromUserId'] ?? '';
+            return !widget.currentUser.isUserBlocked(senderId);
+          }).toList();
 
           if (signals.isEmpty) {
             return Center(

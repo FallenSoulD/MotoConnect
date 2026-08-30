@@ -1,8 +1,31 @@
 class SafetyFilterService {
   static final List<String> _forbiddenKeywords = [
-    "küfür", "hakaret", "dolandırıcı", "sahtekar", "tehdit", "taciz",
-    "şerefsiz", "salak", "aptal", "gerizekalı", "piç", "ibne", "orospu",
-    "yavşak", "pezevenk", "amk", "aq", "sg", "oç", "sik", "yarrak",
+    "küfür",
+    "hakaret",
+    "dolandırıcı",
+    "sahtekar",
+    "tehdit",
+    "taciz",
+    "şerefsiz",
+    "salak",
+    "aptal",
+    "gerizekalı",
+    "piç",
+    "ibne",
+    "orospu",
+    "yavşak",
+    "pezevenk",
+    "amk",
+    "aq",
+    "sg",
+    "oç",
+    "sik",
+    "yarrak",
+    "piç kurusu",
+    "allah",
+    "peygamber",
+    "hz",
+    "hz muhammed",
   ];
 
   /// Metinde uygunsuz, taciz veya hakaret içeren ifade var mı kontrol eder
@@ -20,7 +43,10 @@ class SafetyFilterService {
     String masked = text;
     for (var word in _forbiddenKeywords) {
       final pattern = RegExp(RegExp.escape(word), caseSensitive: false);
-      masked = masked.replaceAllMapped(pattern, (match) => '*' * match.group(0)!.length);
+      masked = masked.replaceAllMapped(
+        pattern,
+        (match) => '*' * match.group(0)!.length,
+      );
     }
     return masked;
   }

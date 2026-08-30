@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../models/user_model.dart';
 import '../../models/ride_model.dart';
 import '../../services/firestore_service.dart';
 import '../../widgets/moto_weather_bar.dart';
 import '../../widgets/neumorphic_widgets.dart';
+import '../../widgets/native_ad_widget.dart';
 import 'create_ride_sheet.dart';
 import 'route_detail_screen.dart';
 
@@ -233,9 +235,18 @@ class _RidesScreenState extends State<RidesScreen> {
                   );
                 }
 
-                return ListView.builder(
+                return ListView.separated(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   itemCount: filteredRides.length,
+                  separatorBuilder: (context, index) {
+                    if ((index + 1) % 3 == 0) {
+                      return NativeAdWidget(
+                        currentUser: widget.aktifKullanici,
+                        templateType: TemplateType.medium,
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
                   itemBuilder: (context, index) {
                     final ride = filteredRides[index];
                     final bool katildi = ride.isUserJoined(widget.aktifKullanici.id);

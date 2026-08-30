@@ -45,27 +45,40 @@ class _SwipeScreenState extends State<SwipeScreen> {
 
   void _profilleriYukle() async {
     try {
-      // SADECE AYNI ROTADAN GEÇEN / KESİŞEN SÜRÜCÜLERİ ÇEK
+      // 1. AYNI ROTADAN GEÇEN / KESİŞEN SÜRÜCÜLER
       final crossedEvents = await FirestoreService()
           .streamCrossedPaths(widget.aktifKullanici.id)
           .first;
 
-      final Map<String, MotoUser> uniqueCrossedRiders = {};
+      // 2. VERİTABANINDAN GENEL KULLANICILAR (Aynı hobilere/tarza sahip olanları eşleştirmek için)
+      final allUsers = await FirestoreService().getRadarUsersOnce(
+          currentUserId: widget.aktifKullanici.id, 
+          currentUserEmail: widget.aktifKullanici.email
+      );
+
+      final Map<String, MotoUser> uniqueRiders = {};
       final String myEmail = widget.aktifKullanici.email.trim().toLowerCase();
 
-      for (final event in crossedEvents) {
-        final rider = event.rider;
-        if (rider.id.isEmpty || rider.id == widget.aktifKullanici.id) continue;
-        if (myEmail.isNotEmpty && rider.email.trim().toLowerCase() == myEmail) continue;
-        if (widget.aktifKullanici.isUserBlocked(rider.id)) continue;
-        if (FirestoreService.isTestUser(rider.id, rider.nickname, rider.email)) continue;
+      void addValidUser(MotoUser rider) {
+        if (rider.id.isEmpty || rider.id == widget.aktifKullanici.id) return;
+        if (myEmail.isNotEmpty && rider.email.trim().toLowerCase() == myEmail) return;
+        if (widget.aktifKullanici.isUserBlocked(rider.id)) return;
+        if (widget.aktifKullanici.isUserPassed(rider.id)) return;
+        if (FirestoreService.isTestUser(rider.id, rider.nickname, rider.email)) return;
+        uniqueRiders[rider.id] = rider;
+      }
 
-        uniqueCrossedRiders[rider.id] = rider;
+      for (final event in crossedEvents) {
+        addValidUser(event.rider);
+      }
+
+      for (final rider in allUsers) {
+        addValidUser(rider);
       }
 
       if (mounted) {
         setState(() {
-          tumProfiller = uniqueCrossedRiders.values.toList();
+          tumProfiller = uniqueRiders.values.toList();
           _filtreleProfiller();
           _yukleniyor = false;
         });
@@ -85,19 +98,24 @@ class _SwipeScreenState extends State<SwipeScreen> {
       }).toList();
     }
 
-    // Ortak özellikleri (tarz veya motor tipi) olanları önceliklendir (En üste al)
+    // Ortak özellikleri (tarz, motor tipi veya HOBİLERİ) olanları puanlayıp en üste al
     karsilasilacakProfiller.sort((a, b) {
       final myStyle = widget.aktifKullanici.ridingStyle.toLowerCase();
       final myMotor = widget.aktifKullanici.primaryMotorType.toLowerCase();
+      final myHobbies = widget.aktifKullanici.hobbies.map((e) => e.toLowerCase()).toList();
 
-      bool aMatches = (a.ridingStyle.toLowerCase() == myStyle && myStyle.isNotEmpty) ||
-                      (a.primaryMotorType.toLowerCase() == myMotor && myMotor.isNotEmpty);
-      bool bMatches = (b.ridingStyle.toLowerCase() == myStyle && myStyle.isNotEmpty) ||
-                      (b.primaryMotorType.toLowerCase() == myMotor && myMotor.isNotEmpty);
+      int aScore = 0;
+      int bScore = 0;
 
-      if (aMatches && !bMatches) return -1;
-      if (!aMatches && bMatches) return 1;
-      return 0; // İkisi de aynı durumdaysa sıralamayı değiştirme
+      if (a.ridingStyle.toLowerCase() == myStyle && myStyle.isNotEmpty) aScore += 2;
+      if (a.primaryMotorType.toLowerCase() == myMotor && myMotor.isNotEmpty) aScore += 2;
+      aScore += a.hobbies.where((h) => myHobbies.contains(h.toLowerCase())).length;
+
+      if (b.ridingStyle.toLowerCase() == myStyle && myStyle.isNotEmpty) bScore += 2;
+      if (b.primaryMotorType.toLowerCase() == myMotor && myMotor.isNotEmpty) bScore += 2;
+      bScore += b.hobbies.where((h) => myHobbies.contains(h.toLowerCase())).length;
+
+      return bScore.compareTo(aScore); // Yüksek skor en üstte
     });
   }
 
@@ -283,6 +301,10 @@ class _SwipeScreenState extends State<SwipeScreen> {
           ),
         );
       }
+    } else {
+      // REDDETTİ (Pas Geçti)
+      widget.aktifKullanici.passUser(degerlendirilenKullanici.id);
+      FirestoreService().passUser(widget.aktifKullanici.id, degerlendirilenKullanici.id);
     }
 
     setState(() {

@@ -2,13 +2,19 @@ import 'package:flutter/material.dart';
 import '../../models/user_model.dart';
 import '../../models/crossed_path_model.dart';
 import '../../services/firestore_service.dart';
-import '../chat/chat_screen.dart';
 import '../../widgets/neumorphic_widgets.dart';
 
-class CrossedPathsScreen extends StatelessWidget {
+class CrossedPathsScreen extends StatefulWidget {
   final MotoUser currentUser;
 
   const CrossedPathsScreen({super.key, required this.currentUser});
+
+  @override
+  State<CrossedPathsScreen> createState() => _CrossedPathsScreenState();
+}
+
+class _CrossedPathsScreenState extends State<CrossedPathsScreen> {
+  final Set<String> _likedUserIds = {};
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +34,7 @@ class CrossedPathsScreen extends StatelessWidget {
         ),
       ),
       body: StreamBuilder<List<CrossedPathEvent>>(
-        stream: FirestoreService().streamCrossedPaths(currentUser.id),
+        stream: FirestoreService().streamCrossedPaths(widget.currentUser.id),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator(color: NeuColors.accentOrange));
@@ -36,7 +42,7 @@ class CrossedPathsScreen extends StatelessWidget {
 
           final allList = snapshot.data ?? [];
           final list = allList
-              .where((item) => !currentUser.isUserBlocked(item.rider.id))
+              .where((item) => !widget.currentUser.isUserBlocked(item.rider.id))
               .toList();
 
           if (list.isEmpty) {
@@ -174,73 +180,48 @@ class CrossedPathsScreen extends StatelessWidget {
                     // Aksiyon Butonları
                     Row(
                       children: [
-                        // Selektör Butonu
+                        // Dinamik Beğeni Butonu (İlk kez basıldığında Selektör, sonra Süper Selektör)
                         Expanded(
                           child: NeuButton(
-                            text: "Selektör",
-                            icon: Icons.flash_on,
-                            color: NeuColors.surface,
-                            textColor: NeuColors.accentAmber,
+                            text: _likedUserIds.contains(rider.id) ? "Süper Selektör" : "Selektör",
+                            icon: _likedUserIds.contains(rider.id) ? Icons.star : Icons.flash_on,
+                            color: _likedUserIds.contains(rider.id) ? NeuColors.accentAmber : NeuColors.surface,
+                            textColor: _likedUserIds.contains(rider.id) ? Colors.black : NeuColors.accentAmber,
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             borderRadius: 12,
                             onPressed: () async {
-                              await FirestoreService().sendRadarSignal(
-                                fromUserId: currentUser.id,
-                                fromNickname: currentUser.nickname,
-                                toUser: rider,
-                              );
-                              if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text("${rider.nickname} adlı sürücüye selektör çakıldı! ⚡"),
-                                  backgroundColor: const Color(0xFF222222),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // Süper Selektör
-                        NeuIconButton(
-                          icon: Icons.star,
-                          iconColor: NeuColors.accentAmber,
-                          size: 42,
-                          iconSize: 20,
-                          tooltip: "Süper Selektör",
-                          onPressed: () async {
-                            await FirestoreService().sendSuperSignal(
-                              fromUserId: currentUser.id,
-                              fromNickname: currentUser.nickname,
-                              toUser: rider,
-                            );
-                            if (!context.mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text("⭐ ${rider.nickname} adlı sürücüye SÜPER SELEKTÖR gönderildi!"),
-                                backgroundColor: Colors.amber[900],
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                        // Sohbet Butonu
-                        Expanded(
-                          child: NeuButton(
-                            text: "Mesaj",
-                            icon: Icons.chat_bubble_outline,
-                            isPrimary: true,
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            borderRadius: 12,
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => SohbetEkrani(
-                                    aktifKullanici: currentUser,
-                                    eslesilenKisi: rider,
+                              if (_likedUserIds.contains(rider.id)) {
+                                // SÜPER SELEKTÖR AT
+                                await FirestoreService().sendSuperSignal(
+                                  fromUserId: widget.currentUser.id,
+                                  fromNickname: widget.currentUser.nickname,
+                                  toUser: rider,
+                                );
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text("⭐ ${rider.nickname} adlı sürücüye SÜPER SELEKTÖR gönderildi!"),
+                                    backgroundColor: Colors.amber[900],
                                   ),
-                                ),
-                              );
+                                );
+                              } else {
+                                // NORMAL SELEKTÖR AT VE BUTONU GÜNCELLE
+                                await FirestoreService().sendRadarSignal(
+                                  fromUserId: widget.currentUser.id,
+                                  fromNickname: widget.currentUser.nickname,
+                                  toUser: rider,
+                                );
+                                setState(() {
+                                  _likedUserIds.add(rider.id);
+                                });
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text("${rider.nickname} adlı sürücüye selektör çakıldı! ⚡"),
+                                    backgroundColor: const Color(0xFF222222),
+                                  ),
+                                );
+                              }
                             },
                           ),
                         ),

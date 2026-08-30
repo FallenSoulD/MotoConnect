@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// MotoConnect Minimalist Modern Dark UI Renk Paleti ve Temel Değerleri
 class NeuColors {
@@ -204,7 +205,10 @@ class _NeuButtonState extends State<NeuButton> {
               ];
 
     return GestureDetector(
-      onTapDown: disabled ? null : (_) => setState(() => _isPressed = true),
+      onTapDown: disabled ? null : (_) {
+        HapticFeedback.lightImpact();
+        setState(() => _isPressed = true);
+      },
       onTapUp: disabled
           ? null
           : (_) {

@@ -11,10 +11,12 @@ import '../../widgets/moto_weather_bar.dart';
 import 'crossed_paths_screen.dart';
 import '../../models/crossed_path_model.dart';
 import 'sos_sheet.dart';
-import '../garage/vip_garage_screen.dart';
 import '../../widgets/neumorphic_widgets.dart';
 import 'ride_recording_screen.dart';
-
+/// [RadarScreen]
+/// Uygulamanın ana ekranıdır (Harita). 
+/// Kullanıcının mevcut konumunu alır, etrafındaki (yanından geçtiği) sürücüleri ve aktif S.O.S sinyallerini harita üzerinde gösterir.
+/// Karanlık tema harita (OpenStreetMap + ColorFiltered) kullanır.
 class RadarScreen extends StatefulWidget {
   final MotoUser aktifKullanici;
   const RadarScreen({super.key, required this.aktifKullanici});
@@ -30,7 +32,8 @@ class _RadarScreenState extends State<RadarScreen> {
   String _gpsDurumMesaji = "GPS Başlatılıyor...";
   StreamSubscription<Position>? _gpsStreamSub;
   DateTime? _lastGpsSyncTime;
-  double _selectedRadiusKm = 5.0; // 5 km (Standart), 30 km (VIP)
+  bool _isMapReady = false;
+  bool _isFirstLocationCentered = false;
   
   // Crossed Paths State
   final Set<String> _recordedCrossedPaths = {};
@@ -122,6 +125,11 @@ class _RadarScreenState extends State<RadarScreen> {
       _gpsDurumMesaji = "Canlı 360 GPS Aktif (${speedKmH.toStringAsFixed(0)} km/s) 🟢";
     });
 
+    if (_isMapReady && !_isFirstLocationCentered) {
+      _isFirstLocationCentered = true;
+      _mapController.move(_benimKonumum, 14.5);
+    }
+
     // 4 saniyede bir Firestore'a anlık koordinat, hız ve yön senkronize et
     final now = DateTime.now();
     if (_lastGpsSyncTime == null || now.difference(_lastGpsSyncTime!).inSeconds >= 4) {
@@ -209,14 +217,11 @@ class _RadarScreenState extends State<RadarScreen> {
       stream: FirestoreService().streamCrossedPaths(widget.aktifKullanici.id),
       builder: (context, snapshot) {
         final allCrossedPaths = snapshot.data ?? [];
-        const Distance distCalculator = Distance();
 
-        // 1. Engellenenleri ve Mesafe Filtresine Uymayanları Filtrele
+        // 1. Engellenenleri Filtrele (Mesafe kısıtlaması kaldırıldı, tüm karşılaşılanlar görünür)
         final radardakiMotorcular = allCrossedPaths.where((event) {
           if (widget.aktifKullanici.isUserBlocked(event.rider.id)) return false;
-          if (_selectedRadiusKm >= 500) return true; // Tüm Şehir
-          final double d = distCalculator.as(LengthUnit.Kilometer, _benimKonumum, event.rider.latLng);
-          return d <= _selectedRadiusKm;
+          return true;
         }).toList();
 
         return StreamBuilder<List<MotoSosAlert>>(
@@ -330,29 +335,23 @@ class _RadarScreenState extends State<RadarScreen> {
                     initialZoom: 13.0,
                     minZoom: 8.0,
                     maxZoom: 18.0,
+                    onMapReady: () {
+                      _isMapReady = true;
+                      if (_gpsAktif && !_isFirstLocationCentered) {
+                        _isFirstLocationCentered = true;
+                        _mapController.move(_benimKonumum, 14.5);
+                      }
+                    },
                     interactionOptions: const InteractionOptions(
                       flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
                     ),
                   ),
                   children: [
                     TileLayer(
-                      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      urlTemplate: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
                       userAgentPackageName: 'com.motoconnect.app',
+                      maxNativeZoom: 16,
                     ),
-                    // Radar menzil dairesi
-                    if (_selectedRadiusKm < 500)
-                      CircleLayer(
-                        circles: [
-                          CircleMarker(
-                            point: _benimKonumum,
-                            radius: _selectedRadiusKm * 1000,
-                            useRadiusInMeter: true,
-                            color: NeuColors.accentOrange.withValues(alpha: 0.08),
-                            borderColor: NeuColors.accentOrange.withValues(alpha: 0.5),
-                            borderStrokeWidth: 1.5,
-                          ),
-                        ],
-                      ),
                     MarkerLayer(markers: markerListesi),
                   ],
                 ),
@@ -435,7 +434,7 @@ class _RadarScreenState extends State<RadarScreen> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
-                                    "Radar: ${radardakiMotorcular.length} Sürücü (${_selectedRadiusKm.toInt()} km)",
+                                    "Radar: ${radardakiMotorcular.length} Sürücü",
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
@@ -462,19 +461,6 @@ class _RadarScreenState extends State<RadarScreen> {
                       ),
 
                       const SizedBox(height: 6),
-
-                      // RADAR MENZİLİ SEÇİCİSİ (5 KM vs 30 KM VIP)
-                      NeuContainer(
-                        padding: const EdgeInsets.all(4),
-                        borderRadius: 16,
-                        child: Row(
-                          children: [
-                            Expanded(child: _buildRadiusButton(5.0, "🎯 5 km (Standart)")),
-                            const SizedBox(width: 6),
-                            Expanded(child: _buildRadiusButton(30.0, "👑 30 km (VIP)")),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -583,50 +569,5 @@ class _RadarScreenState extends State<RadarScreen> {
     );
   }
 
-  void _showVipRadiusSheet() {
-    VipGarajEkrani.showPaywall(context, currentUser: widget.aktifKullanici);
-  }
 
-  Widget _buildRadiusButton(double km, String label) {
-    final bool isSelected = _selectedRadiusKm == km;
-    final bool isVipOnly = km > 5;
-    final bool isUserVip = widget.aktifKullanici.isPremium;
-
-    return GestureDetector(
-      onTap: () {
-        if (isVipOnly && !isUserVip) {
-          _showVipRadiusSheet();
-          return;
-        }
-        setState(() => _selectedRadiusKm = km);
-        double targetZoom = km == 5 ? 14.5 : 11.5;
-        _mapController.move(_benimKonumum, targetZoom);
-      },
-      child: NeuContainer(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        borderRadius: 12,
-        style: isSelected ? NeuStyle.sunken : NeuStyle.flat,
-        color: isSelected ? NeuColors.accentOrange.withValues(alpha: 0.2) : Colors.transparent,
-        borderColor: isSelected ? NeuColors.accentOrange : Colors.transparent,
-        borderWidth: isSelected ? 1.2 : 0,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? NeuColors.accentOrange : Colors.white70,
-                fontSize: 11.5,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-            if (isVipOnly && !isUserVip) ...[
-              const SizedBox(width: 4),
-              const Icon(Icons.lock, color: NeuColors.accentAmber, size: 13),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
 }

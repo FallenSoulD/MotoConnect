@@ -46,7 +46,7 @@ dependencies:
   sign_in_with_apple: ^6.1.4
   crypto: ^3.0.3
   http: ^1.2.0
-  purchases_flutter: ^10.9.1
+  purchases_flutter: ^10.10.1
   sensors_plus: ^7.1.0
   url_launcher: ^6.3.2
   web: ^1.1.1

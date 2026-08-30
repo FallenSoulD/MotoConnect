@@ -156,7 +156,7 @@ class SosSheet {
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text("Günlük S.O.S. gönderme limitinizi doldurdunuz (Maks: 1/gün)."),
+                              content: Text("Günlük S.O.S. gönderme limitinizi doldurdunuz (Maks: 2/gün)."),
                               backgroundColor: Colors.redAccent,
                             ),
                           );

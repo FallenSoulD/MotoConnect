@@ -52,12 +52,16 @@ class AuthService {
 
       final User? firebaseUser = userCredential.user;
       if (firebaseUser == null) return null;
-
       final email = firebaseUser.email ?? "";
 
-      // Mükerrer veya sahte eski profilleri temizle
+      // Aynı e-postanın başka bir hesapta olup olmadığını kontrol et
       if (email.isNotEmpty) {
-        await FirestoreService().cleanDuplicateUserProfiles(firebaseUser.uid, email);
+        final isTaken = await FirestoreService().isEmailTakenByOtherUser(firebaseUser.uid, email);
+        if (isTaken) {
+          // Başka bir hesap var, bu yüzden bu yeni auth hesabını da silebiliriz ki auth çöplük olmasın
+          await firebaseUser.delete();
+          throw Exception("Bu e-posta adresi başka bir kayıt yöntemi ile zaten kullanılıyor. Lütfen doğru yöntemle giriş yapın.");
+        }
       }
 
       // RevenueCat'e Firebase UID'sini tanımla ve aboneliği senkronize et
@@ -157,6 +161,14 @@ class AuthService {
       } else {
         nickname = "Apple Sürücüsü";
       }
+      // Aynı e-postanın başka bir hesapta olup olmadığını kontrol et
+      if (email.isNotEmpty) {
+        final isTaken = await FirestoreService().isEmailTakenByOtherUser(firebaseUser.uid, email);
+        if (isTaken) {
+          await firebaseUser.delete();
+          throw Exception("Bu e-posta adresi başka bir kayıt yöntemi ile zaten kullanılıyor. Lütfen doğru yöntemle giriş yapın.");
+        }
+      }
 
       // RevenueCat senkronizasyonu
       try {
@@ -232,7 +244,6 @@ class AuthService {
     if (user == null) return null;
 
     await PurchaseService().loginUser(user.uid);
-    await FirestoreService().cleanDuplicateUserProfiles(user.uid, email);
     return await FirestoreService().getUserProfile(user.uid);
   }
 
@@ -243,7 +254,6 @@ class AuthService {
 
     await user.updateDisplayName(nickname);
     await PurchaseService().loginUser(user.uid);
-    await FirestoreService().cleanDuplicateUserProfiles(user.uid, email);
 
     final userProfile = MotoUser(
       id: user.uid,

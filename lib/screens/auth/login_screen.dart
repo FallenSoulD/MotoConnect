@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/user_model.dart';
@@ -8,6 +9,7 @@ import '../../widgets/google_account_picker_sheet.dart';
 import '../garage/legal_docs_sheet.dart';
 import '../main_screen.dart';
 import '../../main.dart';
+import '../../utils/profanity_filter.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -22,6 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _nicknameController = TextEditingController();
+  bool _isPrivacyAccepted = false;
 
   @override
   void dispose() {
@@ -41,6 +44,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Google ile Giriş
   Future<void> _handleGoogleAuth() async {
+    if (!_isPrivacyAccepted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Lütfen gizlilik politikası ve kullanım şartlarını onaylayın."), backgroundColor: NeuColors.accentOrange),
+      );
+      return;
+    }
     if (kIsWeb) {
       GoogleAccountPickerSheet.show(
         context,
@@ -76,6 +85,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Gerçek Apple & Face ID ile Giriş
   Future<void> _handleAppleAuth() async {
+    if (!_isPrivacyAccepted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Lütfen gizlilik politikası ve kullanım şartlarını onaylayın."), backgroundColor: NeuColors.accentOrange),
+      );
+      return;
+    }
     setState(() => _isLoading = true);
     try {
       final user = await AuthService().signInWithApple();
@@ -123,6 +138,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // E-Posta / Şifre Giriş veya Kayıt (Android / Fallback)
   Future<void> _handleEmailAuth() async {
+    if (!_isPrivacyAccepted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Lütfen gizlilik politikası ve kullanım şartlarını onaylayın."), backgroundColor: NeuColors.accentOrange),
+      );
+      return;
+    }
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
     final nickname = _nicknameController.text.trim();
@@ -133,6 +154,16 @@ class _LoginScreenState extends State<LoginScreen> {
         const SnackBar(
           content: Text("Lütfen tüm zorunlu alanları doldurun!"),
           backgroundColor: NeuColors.accentOrange,
+        ),
+      );
+      return;
+    }
+
+    if (!isLogin && ProfanityFilter.hasProfanity(nickname)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Lütfen uygunsuz kelimeler içermeyen bir kullanıcı adı seçin."),
+          backgroundColor: Colors.redAccent,
         ),
       );
       return;
@@ -232,7 +263,59 @@ class _LoginScreenState extends State<LoginScreen> {
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 13, color: NeuColors.textSecondary, letterSpacing: 0.2),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 20),
+                
+                // GİZLİLİK ONAYI
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _isPrivacyAccepted ? NeuColors.accentOrange.withValues(alpha: 0.3) : Colors.transparent,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Checkbox(
+                        value: _isPrivacyAccepted,
+                        activeColor: NeuColors.accentOrange,
+                        checkColor: Colors.black,
+                        side: const BorderSide(color: NeuColors.textSecondary, width: 1.5),
+                        onChanged: (val) {
+                          setState(() {
+                            _isPrivacyAccepted = val ?? false;
+                          });
+                        },
+                      ),
+                      Expanded(
+                        child: RichText(
+                          text: TextSpan(
+                            style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.4),
+                            children: [
+                              const TextSpan(text: "MotoConnect "),
+                              TextSpan(
+                                text: "Kullanım Şartları",
+                                style: const TextStyle(color: NeuColors.accentOrange, fontWeight: FontWeight.bold, decoration: TextDecoration.underline),
+                                recognizer: TapGestureRecognizer()
+                                  ..onTap = () => LegalDocsSheet.show(context, docType: LegalDocType.termsOfService),
+                              ),
+                              const TextSpan(text: " ve "),
+                              TextSpan(
+                                text: "Gizlilik Politikası",
+                                style: const TextStyle(color: NeuColors.accentOrange, fontWeight: FontWeight.bold, decoration: TextDecoration.underline),
+                                recognizer: TapGestureRecognizer()
+                                  ..onTap = () => LegalDocsSheet.show(context, docType: LegalDocType.privacyPolicy),
+                              ),
+                              const TextSpan(text: "'nı okudum, anladım ve kabul ediyorum."),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
 
                 // 2. TEK TIKLA SOSYAL GİRİŞ ALANI (APPLE & GOOGLE)
                 NeuContainer(

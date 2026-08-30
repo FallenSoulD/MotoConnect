@@ -13,6 +13,9 @@ import '../models/sos_model.dart';
 import '../models/badge_model.dart';
 import '../models/telemetry_model.dart';
 
+/// [FirestoreService]
+/// Projenin kalbidir. Uygulama ile Firebase Veritabanı arasındaki tüm iletişim (Okuma/Yazma) burada gerçekleşir.
+/// Kullanıcı işlemleri, S.O.S gönderimi, eşleşmeler, mesajlaşma ve telemetri verileri bu sınıf üzerinden yönetilir.
 class FirestoreService {
   static final FirestoreService _instance = FirestoreService._internal();
   factory FirestoreService() => _instance;
@@ -236,10 +239,36 @@ class FirestoreService {
     await verifyUserEmail(uid);
   }
 
+  /// Belirtilen e-posta adresinin, verilen UID haricinde başka bir kullanıcı tarafından kullanılıp kullanılmadığını kontrol eder.
+  Future<bool> isEmailTakenByOtherUser(String uid, String email) async {
+    if (email.trim().isEmpty) return false;
+    final lowerEmail = email.trim().toLowerCase();
+    try {
+      final querySnapshot = await _usersRef.where('email', isEqualTo: lowerEmail).get();
+      for (final doc in querySnapshot.docs) {
+        if (doc.id != uid) {
+          return true; // Başka bir UID'ye ait aynı email bulundu
+        }
+      }
+    } catch (e) {
+      debugPrint("isEmailTakenByOtherUser error: $e");
+    }
+    return false;
+  }
+
   Future<void> blockUser(String currentUserId, String targetUserId) async {
     try {
       await _usersRef.doc(currentUserId).update({
         'blockedUserIds': FieldValue.arrayUnion([targetUserId]),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (_) {}
+  }
+
+  Future<void> passUser(String currentUserId, String targetUserId) async {
+    try {
+      await _usersRef.doc(currentUserId).update({
+        'passedUserIds': FieldValue.arrayUnion([targetUserId]),
         'updatedAt': FieldValue.serverTimestamp(),
       });
     } catch (_) {}
@@ -521,6 +550,8 @@ class FirestoreService {
         if (isTestUser(doc.id, nick, email)) continue;
 
         final user = MotoUser.fromFirestore(doc);
+        if (user.isInactive) continue;
+        
         final key = email.isNotEmpty ? email : doc.id;
         uniqueUsers[key] = user;
       }
@@ -549,6 +580,8 @@ class FirestoreService {
         if (isTestUser(doc.id, nick, email)) continue;
 
         final user = MotoUser.fromFirestore(doc);
+        if (user.isInactive) continue;
+
         final key = email.isNotEmpty ? email : doc.id;
         uniqueUsers[key] = user;
       }
@@ -767,8 +800,11 @@ class FirestoreService {
           .where('senderId', isEqualTo: senderId)
           .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
           .get();
-      return snapshot.docs.isEmpty;
-    } catch (_) {
+      // Günde en fazla 2 SOS gönderilebilir
+      return snapshot.docs.length < 2;
+    } catch (e) {
+      debugPrint("canCreateSosAlert error: $e");
+      // Index yoksa veya hata varsa varsayılan olarak izin veriyoruz
       return true;
     }
   }

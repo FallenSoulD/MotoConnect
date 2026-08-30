@@ -6,6 +6,7 @@ import 'package:sensors_plus/sensors_plus.dart';
 import '../../models/user_model.dart';
 import '../../models/sos_model.dart';
 import '../../services/firestore_service.dart';
+import '../../services/sensor_service.dart';
 import '../../widgets/neumorphic_widgets.dart';
 
 class RideRecordingScreen extends StatefulWidget {
@@ -18,7 +19,7 @@ class RideRecordingScreen extends StatefulWidget {
 
 class _RideRecordingScreenState extends State<RideRecordingScreen> {
   StreamSubscription<Position>? _gpsSub;
-  StreamSubscription<AccelerometerEvent>? _accelSub;
+  StreamSubscription<double>? _leanAngleSub;
   StreamSubscription<UserAccelerometerEvent>? _userAccelSub;
 
   bool _isRecording = true;
@@ -56,7 +57,7 @@ class _RideRecordingScreenState extends State<RideRecordingScreen> {
     _timer?.cancel();
     _crashTimer?.cancel();
     _gpsSub?.cancel();
-    _accelSub?.cancel();
+    _leanAngleSub?.cancel();
     _userAccelSub?.cancel();
     super.dispose();
   }
@@ -95,19 +96,19 @@ class _RideRecordingScreenState extends State<RideRecordingScreen> {
       });
     });
 
-    // Accelerometer (For Lean Angle - includes gravity)
-    _accelSub = accelerometerEventStream().listen((AccelerometerEvent event) {
+    // Accelerometer (For Lean Angle - using SensorService for consistency)
+    SensorService().requestPermissionAndStart();
+    _leanAngleSub = SensorService().leanAngleStream.listen((double angle) {
       if (!_isRecording) return;
-      // Basit yatış açısı hesaplaması (X-Y ekseni üzerinden roll)
-      double angle = atan2(event.x, sqrt(event.y * event.y + event.z * event.z)) * 180 / pi;
       double absAngle = angle.abs();
       if (absAngle > _maxLeanAngle && absAngle < 70) {
-        // 70 dereceden fazlası genelde telefonun düşmesi vs olabilir
         _maxLeanAngle = absAngle;
       }
-      setState(() {
-        _currentLeanAngle = absAngle;
-      });
+      if (mounted) {
+        setState(() {
+          _currentLeanAngle = absAngle;
+        });
+      }
     });
 
     // User Accelerometer (For Crash Detection - without gravity)

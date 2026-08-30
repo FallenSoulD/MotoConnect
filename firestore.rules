@@ -9,47 +9,65 @@ service cloud.firestore {
 
     // 1. KULLANICI PROFİLLERİ (users)
     match /users/{userId} {
+      // Sadece giriş yapmış kullanıcılar profilleri okuyabilir (Radar vs. için gerekli)
       allow read: if isAuthenticated();
+      // Yalnızca kendi profilini güncelleyebilir/silebilir
       allow create, update, delete: if isAuthenticated() && request.auth.uid == userId;
     }
 
     // 2. BİREBİR VE GRUP SOHBETLERİ (chats)
     match /chats/{chatRoomId} {
-      allow read, write: if isAuthenticated();
+      // Sadece chatin katılımcıları okuyabilir/yazabilir
+      allow read: if isAuthenticated() && (request.auth.uid in resource.data.participants);
+      allow create: if isAuthenticated() && (request.auth.uid in request.resource.data.participants);
+      allow update: if isAuthenticated() && (request.auth.uid in resource.data.participants);
 
       match /messages/{messageId} {
-        allow read, write: if isAuthenticated();
+        // ChatRoomId formatı "uidA_uidB" olduğu için güvenlik kontrolü (performanslı)
+        allow read, create: if isAuthenticated() && chatRoomId.matches('.*' + request.auth.uid + '.*');
+        allow update, delete: if false; // Mesajlar sonradan silinemez veya düzenlenemez (Güvenlik)
       }
     }
 
     // 3. SÜRÜŞ ETKİNLİKLERİ VE ROTALAR (rides)
     match /rides/{rideId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
     }
 
     // 4. CANLI GAZLAMA ODALARI (lobbies)
     match /lobbies/{lobbyId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      // Sadece lobi kurucusu veya katılanlar güncelleyebilir
+      allow update, delete: if isAuthenticated(); // Detaylı kontrol eklenebilir
     }
 
     // 5. SELEKTÖR & SİNYAL BİLDİRİMLERİ (signals)
     match /signals/{signalId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated() && request.auth.uid == resource.data.toUserId; // Sadece kendisine gelenleri okur
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.fromUserId; // Kendi adına gönderir
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.toUserId;
     }
 
     // 6. SOS ACİL ÇAĞRILARI (sos_alerts)
     match /sos_alerts/{alertId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.senderId;
+      allow update, delete: if isAuthenticated() && request.auth.uid == resource.data.senderId;
     }
 
     // 7. KULLANICI ŞİKAYETLERİ VE MODERASYON (reports)
     match /reports/{reportId} {
-      allow read, create, update, delete: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.reportedBy;
+      // Sadece adminler raporları okuyabilir ve silebilir
+      allow read, update, delete: if false; 
     }
 
     // 8. SİSTEM VE ADMİN YAPILANDIRMASI (config)
     match /config/{configId} {
-      allow read: if true;
+      allow read: if true; // Uygulamanın açılabilmesi için herkese açık (Sadece okuma)
       allow write: if false;
     }
 
@@ -58,10 +76,19 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if false;
     }
-
-    // Varsayılan
-    match /{document=**} {
-      allow read, write: if isAuthenticated();
+    
+    // 10. GÖZ GEÇMİŞİ (crossed_paths)
+    match /crossed_paths/{pathId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated();
+    }
+    
+    // 11. TELEMETRİ LİDER TABLOSU (telemetry_leaderboard)
+    match /telemetry_leaderboard/{entryId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if false;
     }
   }
 }

@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../models/user_model.dart';
 import '../../services/firestore_service.dart';
 import '../../services/storage_service.dart';
+import '../../utils/profanity_filter.dart';
 import '../../widgets/moderation_sheets.dart';
 import '../../widgets/common_dialogs.dart';
 import 'leaderboard_screen.dart';
@@ -82,6 +83,15 @@ class _GarageScreenState extends State<GarageScreen> {
                       onPressed: () async {
                         final newName = nicknameController.text.trim();
                         if (newName.isNotEmpty) {
+                          if (ProfanityFilter.hasProfanity(newName)) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Lütfen uygunsuz kelimeler içermeyen bir kullanıcı adı seçin."),
+                                backgroundColor: Colors.redAccent,
+                              ),
+                            );
+                            return;
+                          }
                           setState(() {
                             widget.aktifKullanici.nickname = newName;
                           });
