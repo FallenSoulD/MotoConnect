@@ -43,7 +43,7 @@ class CheckoutSheet extends StatefulWidget {
 
 class _CheckoutSheetState extends State<CheckoutSheet> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController(text: "Cenk Ali");
+  final _nameController = TextEditingController();
   final _cardNumController = TextEditingController();
   final _expiryController = TextEditingController();
   final _cvcController = TextEditingController();
@@ -63,15 +63,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
     super.dispose();
   }
 
-  void _fillDemoCard() {
-    setState(() {
-      _nameController.text = widget.user.nickname.isNotEmpty ? widget.user.nickname : "Cenk Ali";
-      _cardNumController.text = "4543 8920 1144 7821";
-      _expiryController.text = "12/28";
-      _cvcController.text = "842";
-      _cityController.text = "İstanbul, Türkiye";
-    });
-  }
+
 
   Future<void> _handlePayment() async {
     if (_formKey.currentState?.validate() != true) {
@@ -118,6 +110,19 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
         );
       }
     }
+  }
+
+  String _calculateVat(String priceString) {
+    try {
+      final match = RegExp(r'(\d+[,\.]\d+)').firstMatch(priceString);
+      if (match != null) {
+        String numStr = match.group(0)!.replaceAll(',', '.');
+        double total = double.parse(numStr);
+        double vat = total - (total / 1.20);
+        return "₺${vat.toStringAsFixed(2).replaceAll('.', ',')}";
+      }
+    } catch (_) {}
+    return "Hesaplanamıyor";
   }
 
   @override
@@ -232,9 +237,9 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                 const Divider(color: Colors.white12, height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
-                    Text("KDV (%20 Dahil):", style: TextStyle(color: Colors.white38, fontSize: 11.5)),
-                    Text("₺0,00", style: TextStyle(color: Colors.white70, fontSize: 11.5)),
+                  children: [
+                    const Text("İçindeki KDV (%20):", style: TextStyle(color: Colors.white38, fontSize: 11.5)),
+                    Text(_calculateVat(widget.package.priceString), style: const TextStyle(color: Colors.white70, fontSize: 11.5)),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -255,25 +260,6 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
           const SizedBox(height: 14),
 
           // HIZLI TEST KARTI DOLDUR BUTONU
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                backgroundColor: Colors.amber.withValues(alpha: 0.1),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              icon: const Icon(Icons.flash_on, color: Colors.amber, size: 16),
-              label: const Text(
-                "Demo Kart Bilgilerini Doldur",
-                style: TextStyle(color: Colors.amber, fontSize: 11.5, fontWeight: FontWeight.bold),
-              ),
-              onPressed: _fillDemoCard,
-            ),
-          ),
-
-          const SizedBox(height: 8),
-
           // 2. KART SAHİBİ ADI SOYADI
           const Text(
             "KART ÜZERİNDEKİ İSİM",

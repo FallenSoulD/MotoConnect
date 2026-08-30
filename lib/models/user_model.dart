@@ -38,6 +38,7 @@ class MotoUser {
   final String id;
   String nickname;
   String email;
+  String? phoneNumber;
   String bio;
   String ridingStyle;
   String experienceLevel;
@@ -75,6 +76,7 @@ class MotoUser {
     required this.id,
     required this.nickname,
     this.email = "",
+    this.phoneNumber,
     required this.bio,
     required this.ridingStyle,
     required this.experienceLevel,
@@ -177,6 +179,7 @@ class MotoUser {
     return {
       'nickname': nickname,
       'email': email,
+      'phoneNumber': phoneNumber,
       'bio': bio,
       'ridingStyle': ridingStyle,
       'experienceLevel': experienceLevel,
@@ -243,6 +246,7 @@ class MotoUser {
       id: id,
       nickname: map['nickname'] ?? 'Sürücü',
       email: map['email'] ?? '',
+      phoneNumber: map['phoneNumber'] as String?,
       bio: map['bio'] ?? '',
       ridingStyle: map['ridingStyle'] ?? 'Standart',
       experienceLevel: map['experienceLevel'] ?? 'Yeni Başlayan',

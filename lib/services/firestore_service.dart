@@ -220,6 +220,18 @@ class FirestoreService {
     } catch (_) {}
   }
 
+  Future<void> verifyUserPhone(String uid, String phoneNumber) async {
+    try {
+      await _usersRef.doc(uid).update({
+        'isVerified': true,
+        'phoneNumber': phoneNumber,
+        'phoneVerified': true,
+        'verifiedAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (_) {}
+  }
+
   Future<void> verifyUserHelmet(String uid) async {
     await verifyUserEmail(uid);
   }
@@ -903,7 +915,27 @@ class FirestoreService {
     ];
   }
 
-  // ================= SÜRÜŞ ETKİNLİKLERİ =================
+  Future<void> cancelAllVipUsers() async {
+    try {
+      final snapshot = await _usersRef.where('isPremium', isEqualTo: true).get();
+      final batch = FirebaseFirestore.instance.batch();
+      for (final doc in snapshot.docs) {
+        batch.update(doc.reference, {
+          'isPremium': false,
+          'vipTier': 'free',
+          'vipPurchasedAt': null,
+          'subscriptionEndDate': null,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+      await batch.commit();
+      debugPrint("Tüm VIP kullanıcılar başarıyla sıfırlandı. Toplam: ${snapshot.docs.length}");
+    } catch (e) {
+      debugPrint("cancelAllVipUsers error: $e");
+    }
+  }
+
+  // ================= ROTA LOBİLERİ =================
 
   Stream<List<RideEvent>> streamRides() => getRidesStream();
 

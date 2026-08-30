@@ -800,6 +800,57 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+            // MEVCUT VİPLERİ SIFIRLAMA BUTONU
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.amberAccent.withValues(alpha: 0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.workspace_premium, color: Colors.amber, size: 20),
+                      SizedBox(width: 8),
+                      Text("Tüm VIP Kullanıcıları Sıfırla", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    "Veritabanındaki test aşamasından kalma tüm VIP üyelikleri anında iptal eder. Herkesi ücretsiz (free) seviyesine düşürür.",
+                    style: TextStyle(color: Colors.white60, fontSize: 12),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.amber[900],
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.cancel, size: 18),
+                      label: const Text("Tüm VIP'leri İptal Et", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      onPressed: () async {
+                        await FirestoreService().cancelAllVipUsers();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Tüm VIP üyelikler başarıyla iptal edildi!"),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         );
       },
@@ -814,6 +865,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
         final config = snapshot.data!;
         
         final priceController = TextEditingController(text: config.vipMonthlyPrice);
+        final yearlyPriceController = TextEditingController(text: config.vipYearlyPrice);
         final maxPhotosController = TextEditingController(text: config.maxFreePhotos.toString());
 
         return SingleChildScrollView(
@@ -821,13 +873,25 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("VIP Üyelik Fiyatı", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+              const Text("VIP Üyelik Fiyatları", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               TextField(
                 controller: priceController,
                 style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(
                   labelText: "Aylık VIP Fiyatı (Örn: ₺149,99 / ay)",
+                  labelStyle: TextStyle(color: Colors.grey),
+                  border: OutlineInputBorder(),
+                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
+                  focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.redAccent)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: yearlyPriceController,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: "Yıllık VIP Fiyatı (Örn: ₺999,99 / yıl)",
                   labelStyle: TextStyle(color: Colors.grey),
                   border: OutlineInputBorder(),
                   enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
@@ -856,7 +920,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
               SwitchListTile(
                 title: const Text("Tüm Garaj Fotoğrafları Ücretli mi?", style: TextStyle(color: Colors.white)),
                 subtitle: const Text("Kapalıysa ücretsiz limitine kadar herkes görebilir", style: TextStyle(color: Colors.white54)),
-                activeColor: Colors.redAccent,
+                activeThumbColor: Colors.redAccent,
                 value: config.isGaragePhotoFeaturePaid,
                 onChanged: (val) => ConfigService().updateConfig(isGaragePhotoFeaturePaid: val),
               ),
@@ -864,7 +928,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
               SwitchListTile(
                 title: const Text("Radar Boost Ücretli mi?", style: TextStyle(color: Colors.white)),
                 subtitle: const Text("Açıksa sadece VIP üyeler haftalık boost kullanabilir", style: TextStyle(color: Colors.white54)),
-                activeColor: Colors.redAccent,
+                activeThumbColor: Colors.redAccent,
                 value: config.isRadarBoostPaid,
                 onChanged: (val) => ConfigService().updateConfig(isRadarBoostPaid: val),
               ),
@@ -872,7 +936,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
               SwitchListTile(
                 title: const Text("Sınırsız Keşfet (Swipe) Ücretsiz mi?", style: TextStyle(color: Colors.white)),
                 subtitle: const Text("Açıksa VIP olmayanlar da sınırsız kaydırabilir", style: TextStyle(color: Colors.white54)),
-                activeColor: Colors.greenAccent,
+                activeThumbColor: Colors.greenAccent,
                 value: config.isUnlimitedSwipeFree,
                 onChanged: (val) => ConfigService().updateConfig(isUnlimitedSwipeFree: val),
               ),
@@ -884,6 +948,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
                   onPressed: () async {
                     await ConfigService().updateConfig(
                       vipMonthlyPrice: priceController.text,
+                      vipYearlyPrice: yearlyPriceController.text,
                       maxFreePhotos: int.tryParse(maxPhotosController.text) ?? 3,
                     );
                     if (context.mounted) {

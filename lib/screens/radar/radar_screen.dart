@@ -2,19 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'dart:async';
-import 'dart:convert';
 import 'package:geolocator/geolocator.dart';
 import '../../models/user_model.dart';
 import '../../models/sos_model.dart';
 import '../../services/firestore_service.dart';
-import '../../widgets/radar_driver_card.dart';
 import '../../widgets/pulse_marker.dart';
 import '../../widgets/moto_weather_bar.dart';
-import '../../widgets/navigation_helper.dart';
 import 'crossed_paths_screen.dart';
+import '../../models/crossed_path_model.dart';
 import 'sos_sheet.dart';
 import '../garage/vip_garage_screen.dart';
 import '../../widgets/neumorphic_widgets.dart';
+import 'ride_recording_screen.dart';
 
 class RadarScreen extends StatefulWidget {
   final MotoUser aktifKullanici;
@@ -25,15 +24,12 @@ class RadarScreen extends StatefulWidget {
 }
 
 class _RadarScreenState extends State<RadarScreen> {
-  MotoUser? _secilenMotorcu;
-  MotoUser? _liveTrackedFriend; // Life 360 Canlı Takip edilen arkadaş
   final MapController _mapController = MapController();
   late LatLng _benimKonumum;
   bool _gpsAktif = false;
   String _gpsDurumMesaji = "GPS Başlatılıyor...";
   StreamSubscription<Position>? _gpsStreamSub;
   DateTime? _lastGpsSyncTime;
-  bool _selektorFlashGoster = false;
   double _selectedRadiusKm = 5.0; // 5 km (Standart), 30 km (VIP)
   
   // Crossed Paths State
@@ -44,9 +40,6 @@ class _RadarScreenState extends State<RadarScreen> {
   void initState() {
     super.initState();
     _benimKonumum = widget.aktifKullanici.latLng;
-    // Açılışta eski test botlarını veritabanından hemen temizle
-    FirestoreService().purgeAllTestUsers();
-    FirestoreService().seedSampleUsersIfEmpty();
     _startContinuousGpsStream();
   }
 
@@ -193,79 +186,6 @@ class _RadarScreenState extends State<RadarScreen> {
     }
   }
 
-  ImageProvider _getImageProvider(String path) {
-    if (path.startsWith('http')) {
-      return NetworkImage(path);
-    }
-    if (path.startsWith('data:image')) {
-      final base64String = path.split(',').last;
-      return MemoryImage(base64Decode(base64String));
-    }
-    return NetworkImage(path);
-  }
-
-  Widget _buildMarkerIcon(MotoUser rider, double distKm) {
-    final bool isVerified = rider.isVerified;
-    final String distBadge = distKm < 1 ? "${(distKm * 1000).toInt()} m" : "${distKm.toStringAsFixed(1)} km";
-
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _secilenMotorcu = rider;
-        });
-      },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Mesafe Rozeti
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: NeuColors.surfaceDark,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: NeuColors.accentOrange, width: 1),
-            ),
-            child: Text(
-              distBadge,
-              style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.bold),
-            ),
-          ),
-          const SizedBox(height: 3),
-          // Sürücü Avatarı
-          Stack(
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: isVerified ? Colors.blueAccent : NeuColors.accentOrange,
-                    width: 2.2,
-                  ),
-                  boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 4)],
-                ),
-                child: CircleAvatar(
-                  radius: 20,
-                  backgroundColor: NeuColors.surfaceDark,
-                  backgroundImage: rider.imageUrls.isNotEmpty ? _getImageProvider(rider.imageUrls[0]) : null,
-                  child: rider.imageUrls.isEmpty ? const Icon(Icons.person, color: NeuColors.accentOrange, size: 20) : null,
-                ),
-              ),
-              if (isVerified)
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(1),
-                    decoration: const BoxDecoration(color: NeuColors.surfaceDark, shape: BoxShape.circle),
-                    child: const Icon(Icons.verified, color: Colors.blueAccent, size: 13),
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildSosMarker(MotoSosAlert sos) {
     return PulseMarker(
@@ -285,32 +205,19 @@ class _RadarScreenState extends State<RadarScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<MotoUser>>(
-      stream: FirestoreService().streamRadarUsers(
-        currentUserId: widget.aktifKullanici.id,
-        currentUserEmail: widget.aktifKullanici.email,
-      ),
+    return StreamBuilder<List<CrossedPathEvent>>(
+      stream: FirestoreService().streamCrossedPaths(widget.aktifKullanici.id),
       builder: (context, snapshot) {
-        final allRiders = snapshot.data ?? [];
+        final allCrossedPaths = snapshot.data ?? [];
         const Distance distCalculator = Distance();
 
         // 1. Engellenenleri ve Mesafe Filtresine Uymayanları Filtrele
-        final radardakiMotorcular = allRiders.where((m) {
-          if (widget.aktifKullanici.isUserBlocked(m.id)) return false;
+        final radardakiMotorcular = allCrossedPaths.where((event) {
+          if (widget.aktifKullanici.isUserBlocked(event.rider.id)) return false;
           if (_selectedRadiusKm >= 500) return true; // Tüm Şehir
-          final double d = distCalculator.as(LengthUnit.Kilometer, _benimKonumum, m.latLng);
+          final double d = distCalculator.as(LengthUnit.Kilometer, _benimKonumum, event.rider.latLng);
           return d <= _selectedRadiusKm;
         }).toList();
-
-        // Canlı Takip Edilen Arkadaşı Listeden Gerçek Zamanlı Güncelle
-        MotoUser? liveFriend;
-        if (_liveTrackedFriend != null) {
-          try {
-            liveFriend = allRiders.firstWhere((r) => r.id == _liveTrackedFriend!.id);
-          } catch (_) {
-            liveFriend = _liveTrackedFriend;
-          }
-        }
 
         return StreamBuilder<List<MotoSosAlert>>(
           stream: FirestoreService().streamActiveSosAlerts(),
@@ -355,15 +262,48 @@ class _RadarScreenState extends State<RadarScreen> {
               ),
             );
 
-            // 2. Çevredeki Filtrelenmiş Motorcular
-            for (var rider in radardakiMotorcular) {
-              final double d = distCalculator.as(LengthUnit.Kilometer, _benimKonumum, rider.latLng);
+            // 2. Çevredeki Filtrelenmiş Denk Gelişler
+            for (var event in radardakiMotorcular) {
               markerListesi.add(
                 Marker(
-                  point: rider.latLng,
-                  width: 90,
-                  height: 75,
-                  child: _buildMarkerIcon(rider, d),
+                  point: event.rider.latLng, // Note: Should ideally be the crossed location, but using rider's last known location.
+                  width: 60,
+                  height: 60,
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CrossedPathsScreen(currentUser: widget.aktifKullanici),
+                        ),
+                      );
+                    },
+                    child: PulseMarker(
+                      color: NeuColors.accentOrange,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: NeuColors.surfaceDark,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: NeuColors.accentOrange, width: 2),
+                          boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 4)],
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              "${event.crossCount}",
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                            const Text(
+                              "Kesişme",
+                              style: TextStyle(color: NeuColors.accentOrange, fontSize: 7, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               );
             }
@@ -393,7 +333,6 @@ class _RadarScreenState extends State<RadarScreen> {
                     interactionOptions: const InteractionOptions(
                       flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
                     ),
-                    onTap: (tapPosition, point) => setState(() => _secilenMotorcu = null),
                   ),
                   children: [
                     TileLayer(
@@ -414,112 +353,9 @@ class _RadarScreenState extends State<RadarScreen> {
                           ),
                         ],
                       ),
-                    // Life 360 Canlı Takip Rota Çizgisi
-                    if (liveFriend != null)
-                      PolylineLayer(
-                        polylines: [
-                          Polyline(
-                            points: [_benimKonumum, liveFriend.latLng],
-                            strokeWidth: 4.5,
-                            color: NeuColors.accentCyan,
-                          ),
-                        ],
-                      ),
                     MarkerLayer(markers: markerListesi),
                   ],
                 ),
-
-                // SELEKTÖR GÖRSEL FLASH EFEKTİ
-                if (_selektorFlashGoster)
-                  IgnorePointer(
-                    child: Container(
-                      color: Colors.amber.withValues(alpha: 0.35),
-                    ),
-                  ),
-
-                // LİFE 360 CANLI TAKİP HUD ŞERİDİ
-                if (liveFriend != null)
-                  Positioned(
-                    top: 100,
-                    left: 16,
-                    right: 16,
-                    child: NeuContainer(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      borderRadius: 16,
-                      depth: 4,
-                      color: const Color(0xFF0B2230),
-                      borderColor: NeuColors.accentCyan,
-                      borderWidth: 1.2,
-                      child: Row(
-                        children: [
-                          PulseMarker(
-                            color: NeuColors.accentCyan,
-                            child: Container(
-                              padding: const EdgeInsets.all(7),
-                              decoration: const BoxDecoration(
-                                color: NeuColors.accentCyan,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(Icons.radar, color: Colors.black, size: 16),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Row(
-                                  children: [
-                                    Flexible(
-                                      child: Text(
-                                        liveFriend.nickname,
-                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.5),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    const NeuBadge(text: "CANLI 360", color: NeuColors.accentCyan, fontSize: 8.5),
-                                  ],
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  "Mesafe: ${distCalculator.as(LengthUnit.Kilometer, _benimKonumum, liveFriend.latLng).toStringAsFixed(2)} km • Hız: ${liveFriend.topSpeedKmH > 0 ? liveFriend.topSpeedKmH.toStringAsFixed(0) : '68'} km/s",
-                                  style: const TextStyle(color: NeuColors.accentCyan, fontSize: 11, fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                          ),
-                          NeuIconButton(
-                            icon: Icons.navigation,
-                            iconColor: NeuColors.accentOrange,
-                            size: 36,
-                            iconSize: 18,
-                            tooltip: "Yol Tarifi Al",
-                            onPressed: () {
-                              final f = liveFriend;
-                              if (f == null) return;
-                              NavigationHelper.openNavigationSheet(
-                                context,
-                                targetLat: f.latLng.latitude,
-                                targetLng: f.latLng.longitude,
-                                title: "${f.nickname} Konumu",
-                                subtitle: "Canlı 360 Sürüş Takibi",
-                              );
-                            },
-                          ),
-                          const SizedBox(width: 6),
-                          NeuIconButton(
-                            icon: Icons.close,
-                            size: 36,
-                            iconSize: 16,
-                            tooltip: "Takibi Bırak",
-                            onPressed: () => setState(() => _liveTrackedFriend = null),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
 
                 // ÜST BİLGİ, HAVA DURUMU & RADAR ÇUBUĞU
                 Positioned(
@@ -665,7 +501,6 @@ class _RadarScreenState extends State<RadarScreen> {
                 ),
 
                 // SOL ALT: HARİTADAN DOĞRUDAN S.O.S. ACİL YARDIM ÇAĞRISI BUTONU
-                if (_secilenMotorcu == null)
                   Positioned(
                     bottom: 24,
                     left: 16,
@@ -704,44 +539,42 @@ class _RadarScreenState extends State<RadarScreen> {
                     ),
                   ),
 
-                // SAĞ ALT: KONUMUMA ODAKLAN BUTONU
+                // SAĞ ALT: SÜRÜŞE BAŞLA & KONUMUMA ODAKLAN
                 Positioned(
                   bottom: 24,
                   right: 16,
-                  child: NeuIconButton(
-                    icon: Icons.my_location,
-                    iconColor: NeuColors.accentOrange,
-                    size: 52,
-                    iconSize: 24,
-                    tooltip: "Konumuma Odaklan",
-                    onPressed: () {
-                      _mapController.move(_benimKonumum, 14.5);
-                      _startContinuousGpsStream();
-                    },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      NeuIconButton(
+                        icon: Icons.sports_motorsports,
+                        iconColor: Colors.white,
+                        color: NeuColors.accentOrange,
+                        size: 52,
+                        iconSize: 24,
+                        tooltip: "Sürüşe Başla (Kayıt & SOS)",
+                        onPressed: () {
+                          Navigator.push(context, MaterialPageRoute(
+                            builder: (_) => RideRecordingScreen(user: widget.aktifKullanici),
+                          ));
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      NeuIconButton(
+                        icon: Icons.my_location,
+                        iconColor: NeuColors.accentOrange,
+                        size: 52,
+                        iconSize: 24,
+                        tooltip: "Konumuma Odaklan",
+                        onPressed: () {
+                          _mapController.move(_benimKonumum, 14.5);
+                          _startContinuousGpsStream();
+                        },
+                      ),
+                    ],
                   ),
                 ),
 
-                // SEÇİLEN MOTORCU BİLGİ KARTI
-                if (_secilenMotorcu != null)
-                  Positioned(
-                    bottom: 24,
-                    left: 16,
-                    right: 88,
-                    child: RadarDriverCard(
-                      selectedRider: _secilenMotorcu!,
-                      currentUserLocation: _benimKonumum,
-                      currentUser: widget.aktifKullanici,
-                      onClose: () => setState(() => _secilenMotorcu = null),
-                      onSignalTriggered: () {
-                        setState(() {
-                          _selektorFlashGoster = true;
-                        });
-                        Future.delayed(const Duration(milliseconds: 180), () {
-                          if (mounted) setState(() => _selektorFlashGoster = false);
-                        });
-                      },
-                    ),
-                  ),
               ],
             );
           },

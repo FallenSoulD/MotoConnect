@@ -177,7 +177,6 @@ class PurchaseService {
     BuildContext context, {
     required MotoUser user,
     required ProductPackage package,
-    bool isSandboxTest = false,
     VoidCallback? onSuccess,
   }) async {
     showDialog(
@@ -191,7 +190,7 @@ class PurchaseService {
     try {
       DateTime? expirationDate;
 
-      if (!isSandboxTest && !kIsWeb && _isConfigured) {
+      if (!kIsWeb && _isConfigured) {
         try {
           final offerings = await Purchases.getOfferings();
           if (offerings.current != null && offerings.current!.availablePackages.isNotEmpty) {
@@ -206,8 +205,7 @@ class PurchaseService {
               expirationDate = DateTime.tryParse(customerInfo.latestExpirationDate!);
             }
           } else {
-            // Mağaza ürünleri henüz App Store / Play Console'da onaylanmamışsa simüle et
-            await Future.delayed(const Duration(milliseconds: 1500));
+            throw Exception("Mağazada uygun paket bulunamadı.");
           }
         } on PlatformException catch (e) {
           var errorCode = PurchasesErrorHelper.getErrorCode(e);
@@ -215,12 +213,10 @@ class PurchaseService {
             if (context.mounted) Navigator.pop(context);
             return false;
           }
-          // Diğer platform hatalarında sandbox akışına devam et
-          await Future.delayed(const Duration(milliseconds: 1500));
+          throw Exception("Ödeme işlemi başarısız oldu: ${e.message}");
         }
       } else {
-        // Sandbox / Test Modu (Gerçek kart gerektirmeyen anında test)
-        await Future.delayed(const Duration(milliseconds: 1200));
+        throw Exception("Satın alma işlemleri Web ortamında desteklenmemektedir.");
       }
 
       if (context.mounted) {
@@ -237,7 +233,7 @@ class PurchaseService {
       onSuccess?.call();
 
       if (context.mounted) {
-        _showSuccessSheet(context, package, isSandbox: isSandboxTest);
+        _showSuccessSheet(context, package, isSandbox: false);
       }
       return true;
 
@@ -418,6 +414,37 @@ class PurchaseService {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Geri yükleme hatası: $e"), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  static Future<void> cancelSubscription(BuildContext context, MotoUser user) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(
+        child: CircularProgressIndicator(color: Colors.redAccent),
+      ),
+    );
+    try {
+      user.isPremium = false;
+      user.subscriptionEndDate = null;
+      await FirestoreService().updateVipStatus(user.id, false);
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Aboneliğiniz başarıyla iptal edildi ve ayrıcalıklarınız kapatıldı."),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("İptal sırasında hata oluştu: $e"), backgroundColor: Colors.red),
         );
       }
     }

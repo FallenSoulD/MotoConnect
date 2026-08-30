@@ -5,9 +5,6 @@ class AdminConfig {
   /// Varsayılan Birincil Yönetici E-Posta Adresleri
   static const List<String> defaultAdminEmails = [
     "cenkaliyedek@gmail.com",
-    "admin@motoconnect.app",
-    "moderator@motoconnect.app",
-    "destek@motoconnect.app",
   ];
 
   static final Set<String> _dynamicAdmins = {};

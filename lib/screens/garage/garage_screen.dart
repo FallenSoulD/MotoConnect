@@ -17,6 +17,7 @@ import 'telemetry_screen.dart';
 import '../admin/admin_panel_screen.dart';
 import '../../widgets/neumorphic_widgets.dart';
 import '../../services/ad_helper.dart';
+import '../../services/purchase_service.dart';
 
 class GarageScreen extends StatefulWidget {
   final MotoUser aktifKullanici;
@@ -598,6 +599,8 @@ class _GarageScreenState extends State<GarageScreen> {
                   currentUser: widget.aktifKullanici,
                   onUnblocked: () => setState(() {}),
                 );
+              } else if (value == 'cancel_vip') {
+                PurchaseService.cancelSubscription(context, widget.aktifKullanici);
               } else if (value == 'delete_account') {
                 ModerationSheets.showDeleteAccountDialog(
                   context,
@@ -641,6 +644,17 @@ class _GarageScreenState extends State<GarageScreen> {
                   ],
                 ),
               ),
+              if (widget.aktifKullanici.isPremium)
+                const PopupMenuItem(
+                  value: 'cancel_vip',
+                  child: Row(
+                    children: [
+                      Icon(Icons.cancel_outlined, color: Colors.orangeAccent, size: 20),
+                      SizedBox(width: 10),
+                      Text("VIP Aboneliği İptal Et", style: TextStyle(color: Colors.white)),
+                    ],
+                  ),
+                ),
               const PopupMenuItem(
                 value: 'blocked',
                 child: Row(

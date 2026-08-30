@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../models/user_model.dart';
 import '../../services/purchase_service.dart';
-import '../../services/config_service.dart';import '../../widgets/neumorphic_widgets.dart';
-import '../../widgets/checkout_sheet.dart';
+import '../../services/config_service.dart';
+import '../../widgets/neumorphic_widgets.dart';
 import 'legal_docs_sheet.dart';
 
 class VipGarajEkrani extends StatefulWidget {
@@ -83,6 +83,7 @@ class _VipGarajEkraniState extends State<VipGarajEkrani> {
         builder: (context, snapshot) {
           final config = snapshot.data ?? const SystemConfig(
             vipMonthlyPrice: '₺149,99 / ay',
+            vipYearlyPrice: '₺999,99 / yıl',
             isGaragePhotoFeaturePaid: true,
             isRadarBoostPaid: true,
             maxFreePhotos: 3,
@@ -177,8 +178,6 @@ class _VipGarajEkraniState extends State<VipGarajEkrani> {
                   _buildNeuBenefit(Icons.workspace_premium, "Altın Taç VIP Rozeti", "Profilinde ve haritada parıldayan altın rozet."),
                   if (config.isGaragePhotoFeaturePaid)
                     _buildNeuBenefit(Icons.photo_library, "${config.maxFreePhotos}+ Fotoğrafta VIP Sınırı", "Sınırsızca diğer sürücülerin tüm garaj fotoğraflarını net görün."),
-                  if (config.isRadarBoostPaid)
-                    _buildNeuBenefit(Icons.local_fire_department, "Ücretsiz Haftalık Radar Boost", "Haritada alevli parıldayarak en üstte yer al."),
                 ],
               ),
             ),
@@ -278,7 +277,7 @@ class _VipGarajEkraniState extends State<VipGarajEkrani> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      config.vipMonthlyPrice,
+                      sub.id == "vip_monthly_v1" ? config.vipMonthlyPrice : config.vipYearlyPrice,
                       style: const TextStyle(
                         color: Colors.white70,
                         fontWeight: FontWeight.bold,
@@ -306,12 +305,12 @@ class _VipGarajEkraniState extends State<VipGarajEkrani> {
                 id: originalSub.id,
                 title: originalSub.title,
                 description: originalSub.description,
-                priceString: originalSub.id == "vip_monthly_v1" ? config.vipMonthlyPrice : originalSub.priceString,
+                priceString: originalSub.id == "vip_monthly_v1" ? config.vipMonthlyPrice : config.vipYearlyPrice,
                 type: originalSub.type,
                 icon: originalSub.icon,
                 discountTag: originalSub.discountTag,
               );
-              CheckoutSheet.show(
+              PurchaseService().purchasePackage(
                 context,
                 user: widget.aktifKullanici,
                 package: dynamicSub,
@@ -324,7 +323,9 @@ class _VipGarajEkraniState extends State<VipGarajEkrani> {
                 const Icon(Icons.workspace_premium, color: Colors.black, size: 22),
                 const SizedBox(width: 8),
                 Text(
-                  "Aylık VIP Aboneliği Başlat (${config.vipMonthlyPrice})",
+                  subscriptions[_selectedTierIndex].id == "vip_monthly_v1" 
+                      ? "Aylık VIP Aboneliği Başlat (${config.vipMonthlyPrice})" 
+                      : "Yıllık VIP Aboneliği Başlat (${config.vipYearlyPrice})",
                   style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 14.5),
                 ),
               ],
@@ -332,36 +333,6 @@ class _VipGarajEkraniState extends State<VipGarajEkrani> {
           ),
 
           const SizedBox(height: 12),
-
-          // 5. SANDBOX / TEST SATIN ALMA BUTONU (KARTSIZ ANINDA DENEME)
-          NeuButton(
-            color: NeuColors.surfaceDark,
-            borderRadius: 16,
-            depth: 3,
-            padding: const EdgeInsets.symmetric(vertical: 13),
-            onPressed: () {
-              final selectedSub = subscriptions[_selectedTierIndex];
-              PurchaseService().purchasePackage(
-                context,
-                user: widget.aktifKullanici,
-                package: selectedSub,
-                isSandboxTest: true,
-                onSuccess: () => setState(() {}),
-              );
-            },
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.science, color: Colors.greenAccent, size: 18),
-                SizedBox(width: 8),
-                Text(
-                  "🧪 Sandbox Test Modunda Satın Al (Kartsız)",
-                  style: TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 13),
-                ),
-              ],
-            ),
-          ),
-
           const SizedBox(height: 24),
 
           // 6. TEK SEFERLİK CONSUMABLE GÜÇLENDİRİCİLER
@@ -419,7 +390,7 @@ class _VipGarajEkraniState extends State<VipGarajEkrani> {
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       text: item.priceString,
                       onPressed: () {
-                        CheckoutSheet.show(
+                        PurchaseService().purchasePackage(
                           context,
                           user: widget.aktifKullanici,
                           package: item,

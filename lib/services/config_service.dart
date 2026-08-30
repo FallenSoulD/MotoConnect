@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SystemConfig {
   final String vipMonthlyPrice;
+  final String vipYearlyPrice;
   final bool isGaragePhotoFeaturePaid;
   final bool isRadarBoostPaid;
   final int maxFreePhotos;
@@ -9,6 +10,7 @@ class SystemConfig {
 
   const SystemConfig({
     required this.vipMonthlyPrice,
+    required this.vipYearlyPrice,
     required this.isGaragePhotoFeaturePaid,
     required this.isRadarBoostPaid,
     required this.maxFreePhotos,
@@ -18,6 +20,7 @@ class SystemConfig {
   factory SystemConfig.fromMap(Map<String, dynamic> data) {
     return SystemConfig(
       vipMonthlyPrice: data['vipMonthlyPrice'] ?? '₺149,99 / ay',
+      vipYearlyPrice: data['vipYearlyPrice'] ?? '₺999,99 / yıl',
       isGaragePhotoFeaturePaid: data['isGaragePhotoFeaturePaid'] ?? true,
       isRadarBoostPaid: data['isRadarBoostPaid'] ?? true,
       maxFreePhotos: data['maxFreePhotos'] ?? 3,
@@ -38,6 +41,7 @@ class ConfigService {
       if (!snapshot.exists || snapshot.data() == null) {
         return const SystemConfig(
           vipMonthlyPrice: '₺149,99 / ay',
+          vipYearlyPrice: '₺999,99 / yıl',
           isGaragePhotoFeaturePaid: true,
           isRadarBoostPaid: true,
           maxFreePhotos: 3,
@@ -53,6 +57,7 @@ class ConfigService {
     if (!snapshot.exists || snapshot.data() == null) {
       return const SystemConfig(
         vipMonthlyPrice: '₺149,99 / ay',
+        vipYearlyPrice: '₺999,99 / yıl',
         isGaragePhotoFeaturePaid: true,
         isRadarBoostPaid: true,
         maxFreePhotos: 3,
@@ -64,6 +69,7 @@ class ConfigService {
 
   Future<void> updateConfig({
     String? vipMonthlyPrice,
+    String? vipYearlyPrice,
     bool? isGaragePhotoFeaturePaid,
     bool? isRadarBoostPaid,
     int? maxFreePhotos,
@@ -71,6 +77,7 @@ class ConfigService {
   }) async {
     final Map<String, dynamic> updates = {};
     if (vipMonthlyPrice != null) updates['vipMonthlyPrice'] = vipMonthlyPrice;
+    if (vipYearlyPrice != null) updates['vipYearlyPrice'] = vipYearlyPrice;
     if (isGaragePhotoFeaturePaid != null) updates['isGaragePhotoFeaturePaid'] = isGaragePhotoFeaturePaid;
     if (isRadarBoostPaid != null) updates['isRadarBoostPaid'] = isRadarBoostPaid;
     if (maxFreePhotos != null) updates['maxFreePhotos'] = maxFreePhotos;

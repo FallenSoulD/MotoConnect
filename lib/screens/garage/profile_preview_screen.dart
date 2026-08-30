@@ -2,6 +2,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../models/user_model.dart';
 import '../../widgets/neumorphic_widgets.dart';
+import 'vip_garage_screen.dart' as import_vip;
+
 class ProfilePreviewScreen extends StatelessWidget {
   final MotoUser user;
 
@@ -288,57 +290,66 @@ class ProfilePreviewScreen extends StatelessWidget {
             // 3'TEN FAZLA FOTOĞRAFLAR (BLURLU)
             if (photos.length > 3)
               ...photos.asMap().entries.skip(3).map((entry) {
-                return NeuContainer(
-                  height: 280,
-                  borderRadius: 20,
-                  padding: EdgeInsets.zero,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: Image(
-                          image: _getImageProvider(entry.value),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 14.0, sigmaY: 14.0),
-                          child: Container(
-                            color: Colors.black.withValues(alpha: 0.5),
-                            padding: const EdgeInsets.all(20),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: NeuColors.accentAmber.withValues(alpha: 0.2),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: NeuColors.accentAmber, width: 1.5),
-                                  ),
-                                  child: const Icon(Icons.workspace_premium, color: NeuColors.accentAmber, size: 30),
-                                ),
-                                const SizedBox(height: 12),
-                                const Text(
-                                  "VIP 3+ Fotoğraf Kilidi",
-                                  style: TextStyle(color: NeuColors.accentAmber, fontWeight: FontWeight.bold, fontSize: 16),
-                                ),
-                                const SizedBox(height: 4),
-                                const Text(
-                                  "Bu ve sonraki fotoğrafları görmek için VIP üyelik alınız.",
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(color: Colors.white70, fontSize: 12),
-                                ),
-                              ],
-                            ),
+                final bool isVip = user.isPremium;
+                return GestureDetector(
+                  onTap: () {
+                    if (!isVip) {
+                      import_vip.VipGarajEkrani.showPaywall(context, currentUser: user);
+                    }
+                  },
+                  child: NeuContainer(
+                    height: 280,
+                    borderRadius: 20,
+                    padding: EdgeInsets.zero,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: Image(
+                            image: _getImageProvider(entry.value),
+                            fit: BoxFit.cover,
                           ),
                         ),
-                      ),
-                    ],
+                        if (!isVip)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 14.0, sigmaY: 14.0),
+                              child: Container(
+                                color: Colors.black.withValues(alpha: 0.5),
+                                padding: const EdgeInsets.all(20),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: NeuColors.accentAmber.withValues(alpha: 0.2),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: NeuColors.accentAmber, width: 1.5),
+                                      ),
+                                      child: const Icon(Icons.workspace_premium, color: NeuColors.accentAmber, size: 30),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    const Text(
+                                      "VIP 3+ Fotoğraf Kilidi",
+                                      style: TextStyle(color: NeuColors.accentAmber, fontWeight: FontWeight.bold, fontSize: 16),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    const Text(
+                                      "Bu ve sonraki fotoğrafları görmek için VIP üyelik alınız.",
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 );
               }),
