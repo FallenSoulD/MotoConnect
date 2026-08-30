@@ -1,0 +1,6 @@
+# Google Play Store Release Keystore Ayarları
+# upload-keystore.jks dosyanızı android/ klasörü içerisine yerleştirip aşağıdaki bilgileri doldurun:
+storePassword=PAROLANIZ
+keyPassword=PAROLANIZ
+keyAlias=upload
+storeFile=../upload-keystore.jks

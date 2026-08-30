@@ -1,0 +1,67 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if user is logged in
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // 1. KULLANICI PROFİLLERİ (users)
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // 2. BİREBİR VE GRUP SOHBETLERİ (chats)
+    match /chats/{chatRoomId} {
+      allow read, write: if isAuthenticated();
+
+      match /messages/{messageId} {
+        allow read, write: if isAuthenticated();
+      }
+    }
+
+    // 3. SÜRÜŞ ETKİNLİKLERİ VE ROTALAR (rides)
+    match /rides/{rideId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // 4. CANLI GAZLAMA ODALARI (lobbies)
+    match /lobbies/{lobbyId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // 5. SELEKTÖR & SİNYAL BİLDİRİMLERİ (signals)
+    match /signals/{signalId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // 6. SOS ACİL ÇAĞRILARI (sos_alerts)
+    match /sos_alerts/{alertId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // 7. KULLANICI ŞİKAYETLERİ VE MODERASYON (reports)
+    match /reports/{reportId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+
+    // 8. SİSTEM VE ADMİN YAPILANDIRMASI (config)
+    match /config/{configId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // 9. DUYURULAR (announcements)
+    match /announcements/{announcementId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    // Varsayılan
+    match /{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}

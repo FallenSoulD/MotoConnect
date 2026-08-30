@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="MotoConnect - Türkiye'nin En Büyük Motosiklet Sosyal & Radar Ağı">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="motoconnect">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>motoconnect</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    body {
+      background-color: #121212;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      width: 100vw;
+      background-color: #121212;
+      color: #ff5722;
+    }
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid rgba(255, 87, 34, 0.2);
+      border-top-color: #ff5722;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="loading" class="loading-container">
+    <div style="font-size: 38px; margin-bottom: 12px;">🏍️</div>
+    <div class="spinner"></div>
+    <p style="margin-top: 18px; color: #ffffff; font-size: 15px; font-weight: 600; letter-spacing: 0.5px;">MotoConnect Yükleniyor...</p>
+  </div>
+  <script>
+    function hideLoader() {
+      var loader = document.getElementById('loading');
+      if (loader) {
+        loader.style.opacity = '0';
+        loader.style.transition = 'opacity 0.3s ease';
+        setTimeout(function() {
+          if (loader && loader.parentNode) {
+            loader.parentNode.removeChild(loader);
+          }
+        }, 300);
+      }
+    }
+
+    window.addEventListener('flutter-first-frame', hideLoader);
+    window.addEventListener('load', function() {
+      setTimeout(hideLoader, 800);
+    });
+
+    const observer = new MutationObserver(function(mutationsList, obs) {
+      for (const mutation of mutationsList) {
+        for (const node of mutation.addedNodes) {
+          if (node.nodeName === 'FLUTTER-VIEW' || node.nodeName === 'FLT-GLASS-PANE' || node.nodeName === 'CANVAS' || (node.classList && node.classList.contains('flutter-view'))) {
+            hideLoader();
+            obs.disconnect();
+            return;
+          }
+        }
+      }
+    });
+
+    if (document.body) {
+      observer.observe(document.body, { childList: true, subtree: true });
+    } else {
+      document.addEventListener('DOMContentLoaded', function() {
+        observer.observe(document.body, { childList: true, subtree: true });
+      });
+    }
+
+    // Güvenlik: Maksimum 2 saniye sonra loading'i kesinlikle kapat
+    setTimeout(hideLoader, 1800);
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(var r of registrations) {
+          r.unregister();
+        }
+      });
+    }
+
+    // MotoConnect Global Jiroskop & Sensör İzin Köprüsü (iOS Safari & Android Web)
+    window.motoCurrentLeanAngle = 0.0;
+    window.motoCurrentGForce = 1.0;
+    window.motoSensorsActive = false;
+
+    window.requestMotoSensorPermission = async function() {
+      try {
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+          const response = await DeviceOrientationEvent.requestPermission();
+          if (response === 'granted') {
+            window._startListeningOrientation();
+            return true;
+          }
+        } else if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+          const response = await DeviceMotionEvent.requestPermission();
+          if (response === 'granted') {
+            window._startListeningOrientation();
+            return true;
+          }
+        } else {
+          window._startListeningOrientation();
+          return true;
+        }
+      } catch (e) {
+        console.log("MotoSensor permission:", e);
+      }
+      return false;
+    };
+
+    window._startListeningOrientation = function() {
+      window.motoSensorsActive = true;
+      window.addEventListener('deviceorientation', function(event) {
+        if (event.gamma !== null && event.gamma !== undefined) {
+          window.motoCurrentLeanAngle = event.gamma;
+        }
+      }, true);
+
+      window.addEventListener('devicemotion', function(event) {
+        if (event.accelerationIncludingGravity) {
+          var acc = event.accelerationIncludingGravity;
+          var total = Math.sqrt((acc.x||0)*(acc.x||0) + (acc.y||0)*(acc.y||0) + (acc.z||0)*(acc.z||0));
+          window.motoCurrentGForce = Math.min(3.5, Math.max(0.5, total / 9.80665));
+        }
+      }, true);
+    };
+
+    // İzin gerektirmeyen tarayıcılarda (Android Chrome vb.) otomatik dinlemeyi başlat
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission !== 'function') {
+      window._startListeningOrientation();
+    }
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
