@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../garage/saved_routes_screen.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../models/user_model.dart';
 import '../../models/ride_model.dart';
@@ -119,33 +120,46 @@ class _RidesScreenState extends State<RidesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: NeuColors.background,
-      appBar: AppBar(
-        backgroundColor: NeuColors.surfaceDark,
-        title: const Row(
-          children: [
-            Icon(Icons.alt_route, color: NeuColors.accentOrange, size: 22),
-            SizedBox(width: 8),
-            Text(
-              "Rotalar & Sürüşler",
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-          ],
-        ),
-        actions: [
-          NeuIconButton(
-            icon: Icons.add_location_alt,
-            iconColor: NeuColors.accentOrange,
-            size: 40,
-            iconSize: 20,
-            tooltip: "Yeni Rota Başlat",
-            onPressed: () => CreateRideSheet.show(context, currentUser: widget.aktifKullanici),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: NeuColors.background,
+        appBar: AppBar(
+          backgroundColor: NeuColors.surfaceDark,
+          title: const Row(
+            children: [
+              Icon(Icons.alt_route, color: NeuColors.accentOrange, size: 22),
+              SizedBox(width: 8),
+              Text(
+                "Rotalar & Sürüşler",
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-        ],
-      ),
-      body: Column(
+          actions: [
+            NeuIconButton(
+              icon: Icons.add_location_alt,
+              iconColor: NeuColors.accentOrange,
+              size: 40,
+              iconSize: 20,
+              tooltip: "Yeni Rota Başlat",
+              onPressed: () => CreateRideSheet.show(context, currentUser: widget.aktifKullanici),
+            ),
+            const SizedBox(width: 12),
+          ],
+          bottom: const TabBar(
+            indicatorColor: NeuColors.accentOrange,
+            labelColor: NeuColors.accentOrange,
+            unselectedLabelColor: Colors.white60,
+            tabs: [
+              Tab(text: "Keşfet"),
+              Tab(text: "Benim Rotalarım"),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            Column(
         children: [
           // 1. CANLI HAVA DURUMU & ASFALT TUTUŞ BAR
           const MotoWeatherBar(),
@@ -481,9 +495,13 @@ class _RidesScreenState extends State<RidesScreen> {
               },
             ),
           ),
-        ],
-      ),
-    );
+          ],
+        ),
+        SavedRoutesScreen(currentUser: widget.aktifKullanici),
+      ],
+    ),
+  ),
+);
   }
 
   Widget _buildFilterChip(String label, double radius) {

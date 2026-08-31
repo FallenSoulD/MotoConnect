@@ -9,6 +9,7 @@ import '../../widgets/neumorphic_widgets.dart';
 import 'dart:async';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../widgets/navigation_helper.dart';
 
 class RouteDetailScreen extends StatefulWidget {
   final RideEvent ride;
@@ -28,6 +29,7 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
   final MapController _mapController = MapController();
   late List<LatLng> _routePoints;
   late bool _joined;
+  late bool _isStarted;
   bool _isLoadingRoute = false;
   
   StreamSubscription<Position>? _positionStream;
@@ -39,6 +41,7 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
     super.initState();
     _routePoints = RouteService().getRoutePointsForRide(widget.ride);
     _joined = widget.ride.isUserJoined(widget.currentUser.id);
+    _isStarted = widget.ride.isStarted;
 
     // Eğer rota noktaları 3'ten az ise gerçek karayolu OSRM rotasını arka planda çek
     if (_routePoints.length < 3 && _routePoints.length >= 2) {
@@ -437,19 +440,25 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                     children: [
                       Expanded(
                         child: NeuButton(
-                          text: "Yol Tarifi",
-                          icon: Icons.navigation_rounded,
-                          color: Colors.blue[800],
+                          text: (_joined && _isStarted) ? "Varış Noktası" : "Buluşma Noktası",
+                          icon: (_joined && _isStarted) ? Icons.rocket_launch : Icons.place,
+                          color: (_joined && _isStarted) ? NeuColors.accentGreen : Colors.blue[800],
                           isPrimary: true,
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          onPressed: () async {
-                            final String googleMapsUrl = "https://www.google.com/maps/dir/?api=1&destination=${Uri.encodeComponent(widget.ride.meetingPoint)}";
-                            if (await canLaunchUrl(Uri.parse(googleMapsUrl))) {
-                              await launchUrl(Uri.parse(googleMapsUrl), mode: LaunchMode.externalApplication);
-                            } else {
-                              if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Harita uygulaması açılamadı.")));
-                            }
+                          onPressed: () {
+                             if (widget.ride.waypoints.isNotEmpty) {
+                                final target = (_joined && _isStarted) ? widget.ride.waypoints.last : widget.ride.waypoints.first;
+                                final title = (_joined && _isStarted) ? "Varış Noktası" : "Buluşma Noktası";
+                                final subtitle = (_joined && _isStarted) ? "Sürüş rotasını başlat (Varış noktasına git)" : "Buluşma noktasına yol tarifi al";
+                                
+                                NavigationHelper.openNavigationSheet(
+                                  context,
+                                  targetLat: target.latitude,
+                                  targetLng: target.longitude,
+                                  title: title,
+                                  subtitle: subtitle,
+                                );
+                             }
                           },
                         ),
                       ),
@@ -481,6 +490,31 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                       ),
                     ],
                   ),
+                  if (widget.currentUser.id == widget.ride.creatorId && !_isStarted) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: NeuButton(
+                        text: "Rotayı Başlat",
+                        icon: Icons.play_arrow_rounded,
+                        color: NeuColors.accentGreen,
+                        isPrimary: true,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        onPressed: () async {
+                          setState(() => _isStarted = true);
+                          await FirestoreService().startRide(widget.ride.id);
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Sürüş başlatıldı! Katılımcılar artık Varış Noktasını görebilir."),
+                              backgroundColor: Colors.green,
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

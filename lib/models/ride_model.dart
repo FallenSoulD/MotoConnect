@@ -17,6 +17,7 @@ class RideEvent {
   final List<LatLng> waypoints;
   final DateTime createdAt;
   final DateTime expiresAt;
+  final bool isStarted;
 
   RideEvent({
     required this.id,
@@ -31,12 +32,13 @@ class RideEvent {
     required this.participantIds,
     this.distanceKm = 45.0,
     this.estimatedDuration = "1s 15dk",
+    this.isStarted = false,
     List<LatLng>? waypoints,
     DateTime? createdAt,
     DateTime? expiresAt,
   })  : waypoints = waypoints ?? [],
         createdAt = createdAt ?? DateTime.now(),
-        expiresAt = expiresAt ?? (createdAt ?? DateTime.now()).add(const Duration(hours: 24));
+        expiresAt = expiresAt ?? (createdAt ?? DateTime.now()).add(const Duration(minutes: 15));
 
   int get participantCount => participantIds.length;
 
@@ -86,6 +88,7 @@ class RideEvent {
       'waypoints': waypoints.map((p) => {'lat': p.latitude, 'lng': p.longitude}).toList(),
       'createdAt': Timestamp.fromDate(createdAt),
       'expiresAt': Timestamp.fromDate(expiresAt),
+      'isStarted': isStarted,
     };
   }
 
@@ -119,7 +122,7 @@ class RideEvent {
       }
     }
 
-    DateTime expireTime = createdTime.add(const Duration(hours: 24));
+    DateTime expireTime = createdTime.add(const Duration(minutes: 15));
     final rawExpires = map['expiresAt'];
     if (rawExpires is Timestamp) {
       expireTime = rawExpires.toDate();
@@ -137,10 +140,11 @@ class RideEvent {
       imageUrl: map['imageUrl'] ??
           'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=800',
       creatorId: map['creatorId'] ?? '',
-      creatorNickname: map['creatorNickname'] ?? 'Motorcu',
+      creatorNickname: map['creatorNickname'] ?? 'Anonim',
       participantIds: List<String>.from(map['participantIds'] ?? []),
       distanceKm: (map['distanceKm'] as num?)?.toDouble() ?? 45.0,
-      estimatedDuration: map['estimatedDuration'] ?? "1s 15dk",
+      estimatedDuration: map['estimatedDuration'] ?? '1s 15dk',
+      isStarted: map['isStarted'] ?? false,
       waypoints: points,
       createdAt: createdTime,
       expiresAt: expireTime,

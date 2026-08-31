@@ -14,7 +14,7 @@ import 'vip_garage_screen.dart';
 import 'safety_center_screen.dart';
 import 'profile_preview_screen.dart';
 import 'edit_vibe_sheet.dart';
-import 'telemetry_screen.dart';
+
 import '../admin/admin_panel_screen.dart';
 import '../../widgets/neumorphic_widgets.dart';
 import '../../services/ad_helper.dart';
@@ -933,55 +933,6 @@ class _GarageScreenState extends State<GarageScreen> {
 
             const SizedBox(height: 14),
 
-            // TELEMETRİ & YATIŞ AÇISI ANALİZÖRÜ KARTI
-            NeuCard(
-              margin: const EdgeInsets.only(bottom: 12),
-              borderColor: NeuColors.accentCyan.withValues(alpha: 0.4),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => TelemetryScreen(currentUser: widget.aktifKullanici),
-                  ),
-                ).then((_) => setState(() {}));
-              },
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: NeuColors.accentCyan.withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.screen_rotation, color: NeuColors.accentCyan, size: 24),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(
-                          children: [
-                            Text(
-                              "Telemetri & Yatış Açısı",
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.5),
-                            ),
-                            SizedBox(width: 6),
-                            NeuBadge(text: "⚡ Gyro", color: NeuColors.accentCyan, fontSize: 9),
-                          ],
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          "Sol: ${widget.aktifKullanici.maxLeanAngleLeft.toStringAsFixed(1)}° | Sağ: ${widget.aktifKullanici.maxLeanAngleRight.toStringAsFixed(1)}° • Viraj Liderleri 🏆",
-                          style: const TextStyle(color: Colors.white60, fontSize: 11),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.chevron_right, color: NeuColors.accentCyan, size: 18),
-                ],
-              ),
-            ),
 
             // LİDERLİK TABLOSU & MOTORCU ROZETLERİ KARTI
             NeuCard(

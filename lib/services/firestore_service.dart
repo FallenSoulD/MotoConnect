@@ -12,6 +12,7 @@ import '../models/live_lobby_model.dart';
 import '../models/sos_model.dart';
 import '../models/badge_model.dart';
 import '../models/telemetry_model.dart';
+import '../models/saved_route_model.dart';
 
 /// [FirestoreService]
 /// Projenin kalbidir. Uygulama ile Firebase Veritabanı arasındaki tüm iletişim (Okuma/Yazma) burada gerçekleşir.
@@ -33,6 +34,7 @@ class FirestoreService {
   CollectionReference get _reportsRef => _db.collection('reports');
   CollectionReference get _sosRef => _db.collection('sos_alerts');
   CollectionReference get _telemetryRef => _db.collection('telemetry_leaderboard');
+  CollectionReference get _savedRoutesRef => _db.collection('saved_routes');
 
   // ================= KULLANICI & GARAJ İŞLEMLERİ =================
 
@@ -671,7 +673,8 @@ class FirestoreService {
     double distanceKm = 0.5,
   }) async {
     try {
-      final docId = "${currentUserId}_${otherUser.id}";
+      final safeLocation = locationName.replaceAll(' ', '_');
+      final docId = "${currentUserId}_${otherUser.id}_$safeLocation";
       await _crossedPathsRef.doc(docId).set({
         'userId': currentUserId,
         'riderId': otherUser.id,
@@ -782,7 +785,7 @@ class FirestoreService {
       final alerts = <MotoSosAlert>[];
       for (final doc in snapshot.docs) {
         final alert = MotoSosAlert.fromFirestore(doc);
-        if (now.difference(alert.timestamp).inHours >= 1) {
+        if (now.difference(alert.timestamp).inMinutes >= 15) {
           doc.reference.delete();
         } else {
           alerts.add(alert);
@@ -1046,6 +1049,14 @@ class FirestoreService {
     } catch (_) {}
   }
 
+  Future<void> startRide(String rideId) async {
+    try {
+      await _ridesRef.doc(rideId).update({
+        'isStarted': true,
+      });
+    } catch (_) {}
+  }
+
   Future<void> seedInitialRidesIfEmpty() async {}
 
   // ================= 100% CANLI VE GERÇEK SOHBET SİSTEMİ =================
@@ -1245,4 +1256,28 @@ class FirestoreService {
   }
 
   Future<void> seedSampleUsersIfEmpty() async {}
+
+  // ================= KAYITLI ROTALAR =================
+  Future<void> saveRoute(SavedRoute route) async {
+    try {
+      await _savedRoutesRef.doc(route.id).set(route.toMap());
+    } catch (e) {
+      debugPrint("saveRoute error: $e");
+    }
+  }
+
+  Stream<List<SavedRoute>> streamSavedRoutes(String userId) {
+    return _savedRoutesRef
+        .where('userId', isEqualTo: userId)
+        .snapshots()
+        .map((snapshot) {
+      final list = snapshot.docs.map((doc) => SavedRoute.fromFirestore(doc)).toList();
+      list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return list;
+    }).handleError((e) {
+      debugPrint("streamSavedRoutes error: $e");
+      return <SavedRoute>[];
+    });
+  }
 }
+

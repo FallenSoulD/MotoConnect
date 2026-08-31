@@ -41,7 +41,6 @@ class CreateRideSheet {
     }
 
     final baslikController = TextEditingController();
-    final tarihController = TextEditingController();
     final bulusmaController = TextEditingController();
     final varisController = TextEditingController();
     String seciliTempo = "Sakin & Manzaralı";
@@ -495,58 +494,25 @@ class CreateRideSheet {
                         prefixIcon: Icons.title,
                       ),
                       const SizedBox(height: 12),
-                      GestureDetector(
-                        onTap: () async {
-                          final date = await showDatePicker(
-                            context: context,
-                            initialDate: DateTime.now(),
-                            firstDate: DateTime.now(),
-                            lastDate: DateTime.now().add(const Duration(days: 30)),
-                            builder: (context, child) {
-                              return Theme(
-                                data: ThemeData.dark().copyWith(
-                                  colorScheme: const ColorScheme.dark(
-                                    primary: NeuColors.accentOrange,
-                                    onPrimary: Colors.white,
-                                    surface: NeuColors.surfaceDark,
-                                    onSurface: Colors.white,
-                                  ),
-                                ),
-                                child: child!,
-                              );
-                            },
-                          );
-                          if (date != null && context.mounted) {
-                            final time = await showTimePicker(
-                              context: context,
-                              initialTime: TimeOfDay.now(),
-                              builder: (context, child) {
-                                return Theme(
-                                  data: ThemeData.dark().copyWith(
-                                    colorScheme: const ColorScheme.dark(
-                                      primary: NeuColors.accentOrange,
-                                      onPrimary: Colors.white,
-                                      surface: NeuColors.surfaceDark,
-                                      onSurface: Colors.white,
-                                    ),
-                                  ),
-                                  child: child!,
-                                );
-                              },
-                            );
-                            if (time != null) {
-                              final formattedDate = "${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year} ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}";
-                              tarihController.text = formattedDate;
-                            }
-                          }
-                        },
-                        child: AbsorbPointer(
-                          child: NeuTextField(
-                            controller: tarihController,
-                            labelText: 'Tarih ve Saat Seç (Dokun)',
-                            hintText: 'Takvimden seçmek için dokunun...',
-                            prefixIcon: Icons.calendar_month,
-                          ),
+                      // 15 Dakika Bilgi Kartı
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.blueAccent.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.3)),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.access_time, color: Colors.blueAccent, size: 20),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                "Oluşturacağınız rota tam 15 dakika sonra başlayacaktır. Katılımcıların başlangıç noktasına gelmesi için 15 dakikası vardır.",
+                                style: TextStyle(color: Colors.white, fontSize: 11.5, height: 1.3),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 14),
@@ -581,7 +547,7 @@ class CreateRideSheet {
                             SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                "Rotalar oluşturulduktan sonra maksimum 24 saat aktif kalır ve ardından otomatik temizlenir.",
+                                "Rotalar oluşturulduktan sonra maksimum 15 dakika aktif kalır ve ardından otomatik temizlenir.",
                                 style: TextStyle(color: Colors.white70, fontSize: 11, height: 1.3),
                               ),
                             ),
@@ -644,10 +610,13 @@ class CreateRideSheet {
                               ? varisController.text.trim()
                               : "Varış Noktası (${endPoint!.latitude.toStringAsFixed(2)}, ${endPoint!.longitude.toStringAsFixed(2)})";
 
+                          final baslamaZamani = DateTime.now().add(const Duration(minutes: 15));
+                          final formattedDate = "${baslamaZamani.day.toString().padLeft(2, '0')}.${baslamaZamani.month.toString().padLeft(2, '0')}.${baslamaZamani.year} ${baslamaZamani.hour.toString().padLeft(2, '0')}:${baslamaZamani.minute.toString().padLeft(2, '0')}";
+
                           final yeniSurus = RideEvent(
                             id: 'ride_${DateTime.now().millisecondsSinceEpoch}',
                             title: baslikController.text.trim(),
-                            date: tarihController.text.trim(),
+                            date: formattedDate,
                             meetingPoint: bulusmaAdi,
                             route: "$bulusmaAdi -> $varisAdi",
                             tempo: seciliTempo,

@@ -203,17 +203,26 @@ class _RadarScreenState extends State<RadarScreen> {
 
 
   Widget _buildSosMarker(MotoSosAlert sos) {
-    return PulseMarker(
-      color: Colors.redAccent,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.red[900],
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.redAccent, width: 2),
-          boxShadow: const [BoxShadow(color: Colors.redAccent, blurRadius: 10)],
+    return GestureDetector(
+      onTap: () {
+        SosSheet.showSosDetails(
+          context,
+          alert: sos,
+          currentUser: widget.aktifKullanici,
+        );
+      },
+      child: PulseMarker(
+        color: Colors.redAccent,
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.red[900],
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.redAccent, width: 2),
+            boxShadow: const [BoxShadow(color: Colors.redAccent, blurRadius: 10)],
+          ),
+          child: const Icon(Icons.crisis_alert, color: Colors.white, size: 22),
         ),
-        child: const Icon(Icons.crisis_alert, color: Colors.white, size: 22),
       ),
     );
   }

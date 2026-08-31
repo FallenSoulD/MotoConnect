@@ -179,6 +179,10 @@ class LegalDocsSheet extends StatelessWidget {
         "7. Fikri Mülkiyet & Değişiklik Hakları",
         "MotoConnect logosu, arayüz tasarımları, yazılım kodları ve tüm marka varlıkları MotoConnect'e aittir; izinsiz kopyalanamaz ve çoğaltılamaz.",
       ),
+      _buildSection(
+        "8. Yaş Sınırı ve Ehliyet Şartı",
+        "Uygulamaya kayıt olmak için en az 18 yaşında olmanız gerekmektedir. Kullanıcılar hesap oluştururken 18 yaşından büyük olduklarını, kendi motosikletlerini kullanmak için geçerli ve yasal bir sürücü belgesine (ehliyet) sahip olduklarını kabul, beyan ve taahhüt ederler. 18 yaş altı kullanıcıların tespiti halinde hesapları kalıcı olarak kapatılacaktır.",
+      ),
     ];
   }
 

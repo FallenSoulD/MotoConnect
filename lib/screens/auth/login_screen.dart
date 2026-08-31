@@ -84,6 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // Gerçek Apple & Face ID ile Giriş
+  // ignore: unused_element
   Future<void> _handleAppleAuth() async {
     if (!_isPrivacyAccepted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -307,7 +308,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                 recognizer: TapGestureRecognizer()
                                   ..onTap = () => LegalDocsSheet.show(context, docType: LegalDocType.privacyPolicy),
                               ),
-                              const TextSpan(text: "'nı okudum, anladım ve kabul ediyorum."),
+                              const TextSpan(text: "'nı okudum, anladım, "),
+                              TextSpan(
+                                text: "18 yaşından büyük olduğumu",
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                              const TextSpan(text: " ve tüm şartları kabul ediyorum."),
                             ],
                           ),
                         ),
@@ -348,7 +354,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         iconColor: Colors.black,
                         borderRadius: 14,
                         isLoading: _isLoading,
-                        onPressed: _isLoading ? null : _handleAppleAuth,
+                        // TODO: Apple Developer hesabı açıldığında _handleAppleAuth fonksiyonunu aktif et
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Apple ile giriş yakında aktif edilecektir."),
+                              backgroundColor: NeuColors.accentOrange,
+                            ),
+                          );
+                        },
                         child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [

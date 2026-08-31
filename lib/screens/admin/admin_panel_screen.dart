@@ -130,12 +130,20 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
     );
 
     if (confirmed == true) {
-      await AdminConfig.removeAdminEmail(email);
-      setState(() {});
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("'$email' admin yetkisi kaldırıldı."), backgroundColor: Colors.orange),
-        );
+      try {
+        await AdminConfig.removeAdminEmail(email);
+        setState(() {});
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("'$email' admin yetkisi kaldırıldı."), backgroundColor: Colors.orange),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.toString().replaceAll("Exception: ", "")), backgroundColor: Colors.red),
+          );
+        }
       }
     }
   }

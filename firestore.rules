@@ -62,14 +62,19 @@ service cloud.firestore {
     // 7. KULLANICI ŞİKAYETLERİ VE MODERASYON (reports)
     match /reports/{reportId} {
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.reportedBy;
-      // Sadece adminler raporları okuyabilir ve silebilir
-      allow read, update, delete: if false; 
+      allow read, update, delete: if isAuthenticated() && request.auth.token.email != null && (
+        request.auth.token.email == "cenkaliyedek@gmail.com" ||
+        request.auth.token.email in get(/databases/$(database)/documents/config/admins).data.emails
+      ); 
     }
 
     // 8. SİSTEM VE ADMİN YAPILANDIRMASI (config)
     match /config/{configId} {
       allow read: if true; // Uygulamanın açılabilmesi için herkese açık (Sadece okuma)
-      allow write: if false;
+      allow write: if isAuthenticated() && request.auth.token.email != null && (
+        request.auth.token.email == "cenkaliyedek@gmail.com" ||
+        request.auth.token.email in get(/databases/$(database)/documents/config/admins).data.emails
+      );
     }
 
     // 9. DUYURULAR (announcements)
@@ -90,6 +95,22 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create, update: if isAuthenticated();
       allow delete: if false;
+    }
+
+    // 12. SİSTEM AYARLARI (system_settings)
+    match /system_settings/{settingId} {
+      allow read: if true;
+      allow write: if isAuthenticated() && request.auth.token.email != null && (
+        request.auth.token.email == "cenkaliyedek@gmail.com" ||
+        request.auth.token.email in get(/databases/$(database)/documents/config/admins).data.emails
+      );
+    }
+
+    // 13. KAYITLI ROTALAR (saved_routes)
+    match /saved_routes/{routeId} {
+      allow read: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow create: if isAuthenticated(); // Herkes kendi userId'si ile yaratıyor zaten
+      allow update, delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
     }
   }
 }

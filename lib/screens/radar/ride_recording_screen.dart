@@ -2,9 +2,12 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import '../../models/user_model.dart';
 import '../../models/sos_model.dart';
+import '../../models/saved_route_model.dart';
 import '../../services/firestore_service.dart';
 import '../../services/sensor_service.dart';
 import '../../widgets/neumorphic_widgets.dart';
@@ -29,6 +32,7 @@ class _RideRecordingScreenState extends State<RideRecordingScreen> {
 
   // GPS Data
   Position? _lastPosition;
+  final List<LatLng> _routePoints = [];
   double _distanceKm = 0.0;
   double _currentSpeedKmh = 0.0;
   double _maxSpeedKmh = 0.0;
@@ -80,6 +84,8 @@ class _RideRecordingScreenState extends State<RideRecordingScreen> {
       if (!_isRecording) return;
       final speed = (position.speed * 3.6).clamp(0.0, 300.0);
       
+      _routePoints.add(LatLng(position.latitude, position.longitude));
+
       if (_lastPosition != null) {
         final dist = Geolocator.distanceBetween(
           _lastPosition!.latitude, _lastPosition!.longitude,
@@ -193,11 +199,12 @@ class _RideRecordingScreenState extends State<RideRecordingScreen> {
     setState(() => _isRecording = false);
     _timer?.cancel();
     
-    // Basit bir sürüş özeti dialog'u
+    final nameController = TextEditingController();
+
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => Dialog(
+      builder: (dialogContext) => Dialog(
         backgroundColor: Colors.transparent,
         child: NeuContainer(
           padding: const EdgeInsets.all(24),
@@ -215,13 +222,82 @@ class _RideRecordingScreenState extends State<RideRecordingScreen> {
               _buildSummaryRow(Icons.speed, "Maks Hız", "${_maxSpeedKmh.toStringAsFixed(1)} km/h"),
               _buildSummaryRow(Icons.screen_rotation, "Maks Yatış", "${_maxLeanAngle.toStringAsFixed(1)}°"),
               
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              if (_routePoints.isNotEmpty)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: SizedBox(
+                    height: 140,
+                    width: double.infinity,
+                    child: FlutterMap(
+                      options: MapOptions(
+                        initialCenter: _routePoints.isNotEmpty ? _routePoints.first : const LatLng(41.0, 29.0),
+                        initialZoom: 13.0,
+                        interactionOptions: const InteractionOptions(flags: InteractiveFlag.none),
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'com.motoconnect.app',
+                        ),
+                        PolylineLayer(
+                          polylines: [
+                            Polyline(
+                              points: _routePoints,
+                              strokeWidth: 4.0,
+                              color: NeuColors.accentOrange,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              const SizedBox(height: 16),
+              NeuTextField(
+                controller: nameController,
+                hintText: "Örn: Pazar Şile Virajları",
+                labelText: "Rota Adı",
+                prefixIcon: Icons.edit_road,
+              ),
+              const SizedBox(height: 16),
               NeuButton(
-                text: "Garaja Dön",
+                text: "Rotayı Kaydet ve Çık",
                 isPrimary: true,
+                onPressed: () async {
+                  if (_routePoints.isNotEmpty) {
+                    final route = SavedRoute(
+                      id: "route_${DateTime.now().millisecondsSinceEpoch}",
+                      userId: widget.user.id,
+                      routeName: nameController.text.trim().isEmpty ? "İsimsiz Rota" : nameController.text.trim(),
+                      waypoints: _routePoints,
+                      distanceKm: _distanceKm,
+                      duration: _duration,
+                      createdAt: DateTime.now(),
+                    );
+                    await FirestoreService().saveRoute(route);
+                    if (dialogContext.mounted) {
+                      ScaffoldMessenger.of(dialogContext).showSnackBar(
+                        const SnackBar(content: Text("Rota başarıyla kaydedildi!"), backgroundColor: Colors.green),
+                      );
+                    }
+                  }
+                  if (dialogContext.mounted) {
+                    Navigator.pop(dialogContext);
+                  }
+                  if (mounted) {
+                    Navigator.pop(context);
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
+              NeuButton(
+                text: "Kaydetmeden Çık",
+                color: NeuColors.surfaceDark,
+                textColor: Colors.redAccent,
                 onPressed: () {
-                  // İstenirse burada Firestore'a Sürüş Geçmişi yazılabilir.
-                  Navigator.pop(context);
+                  Navigator.pop(dialogContext);
                   Navigator.pop(context);
                 },
               )

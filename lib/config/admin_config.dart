@@ -51,15 +51,20 @@ class AdminConfig {
     } catch (_) {}
   }
 
-  /// Bir admin e-postasını yetkiden çıkarır
   static Future<void> removeAdminEmail(String email) async {
     final normalized = email.trim().toLowerCase();
+    if (defaultAdminEmails.any((e) => e.toLowerCase() == normalized)) {
+      throw Exception("Kurucu admin hesabı silinemez.");
+    }
     _dynamicAdmins.remove(normalized);
     try {
       await FirebaseFirestore.instance.collection('config').doc('admins').update({
         'emails': FieldValue.arrayRemove([normalized]),
         'updatedAt': FieldValue.serverTimestamp(),
       });
-    } catch (_) {}
+    } catch (e) {
+      _dynamicAdmins.add(normalized); // geri ekle
+      throw Exception("Silinemedi, veritabanı hatası: $e");
+    }
   }
 }
