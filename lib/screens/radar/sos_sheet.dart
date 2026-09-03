@@ -4,6 +4,7 @@ import '../../models/sos_model.dart';
 import '../../services/firestore_service.dart';
 import '../../widgets/navigation_helper.dart';
 import '../../widgets/neumorphic_widgets.dart';
+import '../chat/chat_screen.dart';
 
 class SosSheet {
   static const List<Map<String, String>> sosTypes = [
@@ -18,7 +19,6 @@ class SosSheet {
   static void showCreateSos(BuildContext context, {required MotoUser currentUser}) {
     String selectedType = 'Akü Bitti / Takviye';
     final descController = TextEditingController();
-    final phoneController = TextEditingController(text: "+90 532 999 88 77");
 
     showModalBottomSheet(
       context: context,
@@ -135,14 +135,6 @@ class SosSheet {
                       hintText: "Örn: Takviye kablosu lazım, emniyet şeridindeyim",
                       prefixIcon: Icons.description_outlined,
                     ),
-                    const SizedBox(height: 12),
-                    NeuTextField(
-                      controller: phoneController,
-                      keyboardType: TextInputType.phone,
-                      labelText: "İletişim Numarası",
-                      hintText: "+90 5XX XXX XX XX",
-                      prefixIcon: Icons.phone,
-                    ),
                     const SizedBox(height: 22),
                     NeuButton(
                       text: "SOS SİNYALİNİ HARİTADA YAYINLA",
@@ -167,7 +159,7 @@ class SosSheet {
                           id: 'sos_${DateTime.now().millisecondsSinceEpoch}',
                           senderId: currentUser.id,
                           senderNickname: currentUser.nickname,
-                          senderPhone: phoneController.text.trim(),
+                          senderPhone: "",
                           senderPhoto: currentUser.imageUrls.isNotEmpty ? currentUser.imageUrls[0] : "",
                           type: selectedType,
                           description: descController.text.trim().isNotEmpty
@@ -277,16 +269,28 @@ class SosSheet {
                 children: [
                   Expanded(
                     child: NeuButton(
-                      text: "Sürücüyü Ara",
-                      icon: Icons.phone,
-                      color: Colors.green[800],
+                      text: "Mesaj At",
+                      icon: Icons.chat_bubble_outline,
+                      color: NeuColors.accentOrange,
                       textColor: Colors.white,
                       onPressed: () {
                         Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text("${alert.senderNickname} aranıyor: ${alert.senderPhone}"),
-                            backgroundColor: Colors.green,
+                        final fakeUser = MotoUser(
+                          id: alert.senderId,
+                          nickname: alert.senderNickname,
+                          imageUrls: [if (alert.senderPhoto.isNotEmpty) alert.senderPhoto],
+                          bio: 'S.O.S Yardım Talebi',
+                          ridingStyle: 'Naked',
+                          experienceLevel: 'Bilinmiyor',
+                          garage: const [],
+                        );
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => SohbetEkrani(
+                              aktifKullanici: currentUser,
+                              eslesilenKisi: fakeUser,
+                            ),
                           ),
                         );
                       },

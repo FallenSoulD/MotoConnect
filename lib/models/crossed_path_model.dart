@@ -8,6 +8,8 @@ class CrossedPathEvent {
   final int crossCount;
   final DateTime timestamp;
   final double distanceKm;
+  final double? latitude;
+  final double? longitude;
 
   CrossedPathEvent({
     required this.id,
@@ -17,16 +19,22 @@ class CrossedPathEvent {
     this.crossCount = 1,
     required this.timestamp,
     this.distanceKm = 0.5,
+    this.latitude,
+    this.longitude,
   });
 
   Map<String, dynamic> toMap() {
+    final riderMap = rider.toMap();
+    riderMap['id'] = rider.id;
     return {
-      'rider': rider.toMap(),
+      'rider': riderMap,
       'locationName': locationName,
       'timeAgo': timeAgo,
       'crossCount': crossCount,
       'timestamp': timestamp.millisecondsSinceEpoch,
       'distanceKm': distanceKm,
+      'latitude': latitude,
+      'longitude': longitude,
     };
   }
 
@@ -34,7 +42,10 @@ class CrossedPathEvent {
     return CrossedPathEvent(
       id: id.isNotEmpty ? id : (map['id'] ?? ''),
       rider: map['rider'] != null
-          ? MotoUser.fromMap(map['rider'] as Map<String, dynamic>, (map['rider'] as Map<String, dynamic>)['id'] ?? '')
+          ? MotoUser.fromMap(
+              map['rider'] as Map<String, dynamic>, 
+              (map['rider'] as Map<String, dynamic>)['id'] ?? map['riderId'] ?? ''
+            )
           : MotoUser(
               id: map['riderId'] ?? '',
               nickname: map['riderNickname'] ?? 'Motorcu',
@@ -50,6 +61,8 @@ class CrossedPathEvent {
           ? DateTime.fromMillisecondsSinceEpoch((map['timestamp'] as num).toInt())
           : DateTime.now(),
       distanceKm: (map['distanceKm'] as num?)?.toDouble() ?? 0.5,
+      latitude: (map['latitude'] as num?)?.toDouble(),
+      longitude: (map['longitude'] as num?)?.toDouble(),
     );
   }
 }

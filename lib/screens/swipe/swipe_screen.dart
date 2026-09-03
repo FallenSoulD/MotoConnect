@@ -272,6 +272,11 @@ class _SwipeScreenState extends State<SwipeScreen> {
         fromNickname: widget.aktifKullanici.nickname,
         toUser: degerlendirilenKullanici,
       );
+      FirestoreService().updateLikes(
+        widget.aktifKullanici.id,
+        superLikes: widget.aktifKullanici.superLikesLeft,
+        lastLimitsResetAt: widget.aktifKullanici.lastLimitsResetAt,
+      );
       _eslesmeEkraniGoster(degerlendirilenKullanici, isSuperMatch: true);
     } else if (begenildiMi) {
       if (!widget.aktifKullanici.useSwipeLike()) {
@@ -286,6 +291,7 @@ class _SwipeScreenState extends State<SwipeScreen> {
       FirestoreService().updateLikes(
         widget.aktifKullanici.id,
         swipeLikes: widget.aktifKullanici.swipeLikesLeft,
+        lastLimitsResetAt: widget.aktifKullanici.lastLimitsResetAt,
       );
 
       final bool karsilikliBegeniVarMi = degerlendirilenKullanici.id == "rider_asfalt";

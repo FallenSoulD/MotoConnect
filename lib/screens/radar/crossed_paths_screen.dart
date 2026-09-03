@@ -6,8 +6,13 @@ import '../../widgets/neumorphic_widgets.dart';
 
 class CrossedPathsScreen extends StatefulWidget {
   final MotoUser currentUser;
+  final List<CrossedPathEvent>? filteredEvents;
 
-  const CrossedPathsScreen({super.key, required this.currentUser});
+  const CrossedPathsScreen({
+    super.key, 
+    required this.currentUser,
+    this.filteredEvents,
+  });
 
   @override
   State<CrossedPathsScreen> createState() => _CrossedPathsScreenState();
@@ -33,47 +38,56 @@ class _CrossedPathsScreenState extends State<CrossedPathsScreen> {
           ],
         ),
       ),
-      body: StreamBuilder<List<CrossedPathEvent>>(
-        stream: FirestoreService().streamCrossedPaths(widget.currentUser.id),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: NeuColors.accentOrange));
-          }
+      body: widget.filteredEvents != null
+          ? _buildListView(widget.filteredEvents!.where((item) => item.rider.id.isNotEmpty).toList())
+          : StreamBuilder<List<CrossedPathEvent>>(
+              stream: FirestoreService().streamCrossedPaths(widget.currentUser.id),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator(color: NeuColors.accentOrange));
+                }
 
-          final allList = snapshot.data ?? [];
-          final list = allList
-              .where((item) => !widget.currentUser.isUserBlocked(item.rider.id))
-              .toList();
+                final allList = snapshot.data ?? [];
+                final list = allList
+                    .where((item) => item.rider.id.isNotEmpty && !widget.currentUser.isUserBlocked(item.rider.id))
+                    .toList();
 
-          if (list.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    NeuContainer(
-                      padding: const EdgeInsets.all(24),
-                      borderRadius: 36,
-                      depth: 4,
-                      child: const Icon(Icons.navigation_outlined, size: 64, color: NeuColors.accentOrange),
-                    ),
-                    const SizedBox(height: 18),
-                    const Text(
-                      "Henüz yolda kimseyle kesişmedin.",
-                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      "Motosikletinle turladıkça aynı güzergahtan geçenler burada listelenecek.",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white54, fontSize: 13),
-                    ),
-                  ],
-                ),
+                return _buildListView(list);
+              },
+            ),
+    );
+  }
+
+  Widget _buildListView(List<CrossedPathEvent> list) {
+    if (list.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              NeuContainer(
+                padding: const EdgeInsets.all(24),
+                borderRadius: 36,
+                depth: 4,
+                child: const Icon(Icons.navigation_outlined, size: 64, color: NeuColors.accentOrange),
               ),
-            );
-          }
+              const SizedBox(height: 18),
+              const Text(
+                "Henüz yolda kimseyle kesişmedin.",
+                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                "Motosikletinle turladıkça aynı güzergahtan geçenler burada listelenecek.",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white54, fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
           return ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -192,35 +206,63 @@ class _CrossedPathsScreenState extends State<CrossedPathsScreen> {
                             onPressed: () async {
                               if (_likedUserIds.contains(rider.id)) {
                                 // SÜPER SELEKTÖR AT
-                                await FirestoreService().sendSuperSignal(
-                                  fromUserId: widget.currentUser.id,
-                                  fromNickname: widget.currentUser.nickname,
-                                  toUser: rider,
-                                );
-                                if (!context.mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text("⭐ ${rider.nickname} adlı sürücüye SÜPER SELEKTÖR gönderildi!"),
-                                    backgroundColor: Colors.amber[900],
-                                  ),
-                                );
+                                if (widget.currentUser.useSuperLike()) {
+                                  await FirestoreService().sendSuperSignal(
+                                    fromUserId: widget.currentUser.id,
+                                    fromNickname: widget.currentUser.nickname,
+                                    toUser: rider,
+                                  );
+                                  await FirestoreService().updateLikes(
+                                    widget.currentUser.id,
+                                    superLikes: widget.currentUser.superLikesLeft,
+                                    lastLimitsResetAt: widget.currentUser.lastLimitsResetAt,
+                                  );
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text("⭐ ${rider.nickname} adlı sürücüye SÜPER SELEKTÖR gönderildi!"),
+                                      backgroundColor: Colors.amber[900],
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Günlük Süper Selektör hakkın doldu! VIP Garaj ile limitsiz."),
+                                      backgroundColor: Colors.amber,
+                                    ),
+                                  );
+                                }
                               } else {
                                 // NORMAL SELEKTÖR AT VE BUTONU GÜNCELLE
-                                await FirestoreService().sendRadarSignal(
-                                  fromUserId: widget.currentUser.id,
-                                  fromNickname: widget.currentUser.nickname,
-                                  toUser: rider,
-                                );
-                                setState(() {
-                                  _likedUserIds.add(rider.id);
-                                });
-                                if (!context.mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text("${rider.nickname} adlı sürücüye selektör çakıldı! ⚡"),
-                                    backgroundColor: const Color(0xFF222222),
-                                  ),
-                                );
+                                if (widget.currentUser.useRadarLike()) {
+                                  await FirestoreService().sendRadarSignal(
+                                    fromUserId: widget.currentUser.id,
+                                    fromNickname: widget.currentUser.nickname,
+                                    toUser: rider,
+                                  );
+                                  await FirestoreService().updateLikes(
+                                    widget.currentUser.id,
+                                    radarLikes: widget.currentUser.radarLikesLeft,
+                                    lastLimitsResetAt: widget.currentUser.lastLimitsResetAt,
+                                  );
+                                  setState(() {
+                                    _likedUserIds.add(rider.id);
+                                  });
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text("${rider.nickname} adlı sürücüye selektör çakıldı! ⚡"),
+                                      backgroundColor: const Color(0xFF222222),
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Günlük Selektör hakkın doldu! VIP Garaj ile limitsiz."),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
                               }
                             },
                           ),
@@ -232,8 +274,5 @@ class _CrossedPathsScreenState extends State<CrossedPathsScreen> {
               );
             },
           );
-        },
-      ),
-    );
   }
 }

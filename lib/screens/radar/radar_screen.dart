@@ -30,7 +30,6 @@ class _RadarScreenState extends State<RadarScreen> {
   final MapController _mapController = MapController();
   late LatLng _benimKonumum;
   bool _gpsAktif = false;
-  String _gpsDurumMesaji = "GPS Başlatılıyor...";
   StreamSubscription<Position>? _gpsStreamSub;
   DateTime? _lastGpsSyncTime;
   bool _isMapReady = false;
@@ -65,7 +64,6 @@ class _RadarScreenState extends State<RadarScreen> {
         if (mounted) {
           setState(() {
             _gpsAktif = false;
-            _gpsDurumMesaji = "Konum servisi kapalı";
           });
         }
         return;
@@ -78,7 +76,6 @@ class _RadarScreenState extends State<RadarScreen> {
           if (mounted) {
             setState(() {
               _gpsAktif = false;
-              _gpsDurumMesaji = "Konum izni verilmedi";
             });
           }
           return;
@@ -89,7 +86,6 @@ class _RadarScreenState extends State<RadarScreen> {
         if (mounted) {
           setState(() {
             _gpsAktif = false;
-            _gpsDurumMesaji = "Konum izni kalıcı reddedildi";
           });
         }
         return;
@@ -114,7 +110,6 @@ class _RadarScreenState extends State<RadarScreen> {
       if (mounted) {
         setState(() {
           _gpsAktif = false;
-          _gpsDurumMesaji = "GPS Hatası (Varsayılan Konum)";
         });
       }
     }
@@ -129,7 +124,6 @@ class _RadarScreenState extends State<RadarScreen> {
       widget.aktifKullanici.latitude = position.latitude;
       widget.aktifKullanici.longitude = position.longitude;
       _gpsAktif = true;
-      _gpsDurumMesaji = "Canlı 360 GPS Aktif 🟢";
     });
 
     if (_isMapReady && !_isFirstLocationCentered) {
@@ -181,15 +175,19 @@ class _RadarScreenState extends State<RadarScreen> {
           await FirestoreService().recordCrossedPath(
             currentUserId: widget.aktifKullanici.id,
             otherUser: rider,
-            locationName: "Yakınından Geçti",
+            locationName: widget.aktifKullanici.locationName.isNotEmpty ? widget.aktifKullanici.locationName : "Yakınından Geçti",
             distanceKm: dist / 1000.0,
+            latitude: _benimKonumum.latitude,
+            longitude: _benimKonumum.longitude,
           );
           // Karşı tarafın swipe ekranına da düşmek için karşı taraf için de kaydedelim
           await FirestoreService().recordCrossedPath(
             currentUserId: rider.id,
             otherUser: widget.aktifKullanici,
-            locationName: "Yakınından Geçti",
+            locationName: rider.locationName.isNotEmpty ? rider.locationName : "Yakınından Geçti",
             distanceKm: dist / 1000.0,
+            latitude: rider.latitude!,
+            longitude: rider.longitude!,
           );
           
           _recordedCrossedPaths.add(rider.id);
@@ -283,44 +281,72 @@ class _RadarScreenState extends State<RadarScreen> {
               ),
             );
 
-            // 2. Çevredeki Filtrelenmiş Denk Gelişler
+            // 2. Çevredeki Filtrelenmiş Denk Gelişler (Grid / Modular Bölgesel Kümeleme)
+            final Map<String, List<CrossedPathEvent>> groupedPaths = {};
             for (var event in radardakiMotorcular) {
+              final lat = event.latitude ?? event.rider.latLng.latitude;
+              final lng = event.longitude ?? event.rider.latLng.longitude;
+              
+              // 0.015 hassasiyet yaklaşık 1.5 - 2 km'lik grid'ler (bölgeler) oluşturur
+              final latKey = (lat / 0.015).round() * 0.015;
+              final lngKey = (lng / 0.015).round() * 0.015;
+              final key = "${latKey.toStringAsFixed(3)}_${lngKey.toStringAsFixed(3)}";
+
+              if (!groupedPaths.containsKey(key)) {
+                groupedPaths[key] = [];
+              }
+              groupedPaths[key]!.add(event);
+            }
+
+            for (var entry in groupedPaths.entries) {
+              final count = entry.value.length; 
+              final firstEvent = entry.value.first;
+              
+              final clusterLat = firstEvent.latitude ?? firstEvent.rider.latLng.latitude;
+              final clusterLng = firstEvent.longitude ?? firstEvent.rider.latLng.longitude;
+              final clusterPoint = LatLng(clusterLat, clusterLng);
+
               markerListesi.add(
                 Marker(
-                  point: event.rider.latLng, // Note: Should ideally be the crossed location, but using rider's last known location.
-                  width: 60,
-                  height: 60,
+                  point: clusterPoint, 
+                  width: 50,
+                  height: 50,
                   child: GestureDetector(
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => CrossedPathsScreen(currentUser: widget.aktifKullanici),
+                          builder: (context) => CrossedPathsScreen(
+                            currentUser: widget.aktifKullanici,
+                            filteredEvents: entry.value,
+                          ),
                         ),
                       );
                     },
                     child: PulseMarker(
                       color: NeuColors.accentOrange,
                       child: Container(
-                        padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
                           color: NeuColors.surfaceDark,
                           shape: BoxShape.circle,
-                          border: Border.all(color: NeuColors.accentOrange, width: 2),
-                          boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 4)],
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              "${event.crossCount}",
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                            ),
-                            const Text(
-                              "Kesişme",
-                              style: TextStyle(color: NeuColors.accentOrange, fontSize: 7, fontWeight: FontWeight.bold),
-                            ),
+                          border: Border.all(color: NeuColors.accentOrange, width: 2.5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: NeuColors.accentOrange.withValues(alpha: 0.4),
+                              blurRadius: 8,
+                              spreadRadius: 2,
+                            )
                           ],
+                        ),
+                        child: Center(
+                          child: Text(
+                            "$count",
+                            style: const TextStyle(
+                              color: Colors.white, 
+                              fontWeight: FontWeight.w900, 
+                              fontSize: 18,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -446,49 +472,7 @@ class _RadarScreenState extends State<RadarScreen> {
                       // CANLI MOTORCU HAVA & ASFALT TUTUŞ BAR
                       const MotoWeatherBar(),
 
-                      const SizedBox(height: 8),
 
-                      // RADAR BİLGİ & MENZİL ÇUBUĞU
-                      NeuContainer(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        borderRadius: 16,
-                        child: Row(
-                          children: [
-                            const Icon(Icons.radar, color: NeuColors.accentOrange, size: 22),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    "Radar: ${radardakiMotorcular.length} Sürücü",
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                      fontSize: 12.5,
-                                    ),
-                                  ),
-                                  Text(
-                                    _gpsDurumMesaji,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: _gpsAktif ? NeuColors.accentGreen : Colors.white54,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 6),
                     ],
                   ),
                 ),

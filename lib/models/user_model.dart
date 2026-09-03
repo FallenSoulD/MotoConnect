@@ -53,6 +53,7 @@ class MotoUser {
   int swipeLikesLeft;
   int radarLikesLeft;
   int superLikesLeft;
+  DateTime? lastLimitsResetAt;
   double? latitude;
   double? longitude;
   String locationName;
@@ -91,8 +92,9 @@ class MotoUser {
     this.subscriptionEndDate,
     this.vipTier = "free",
     this.swipeLikesLeft = 10,
-    this.radarLikesLeft = 5,
-    this.superLikesLeft = 1,
+    this.radarLikesLeft = 10,
+    this.superLikesLeft = 10,
+    this.lastLimitsResetAt,
     this.latitude = 40.986,
     this.longitude = 29.026,
     this.locationName = "Kadıköy",
@@ -142,7 +144,20 @@ class MotoUser {
     return true;
   }
 
+  void _checkDailyReset() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    if (lastLimitsResetAt == null || lastLimitsResetAt!.isBefore(today)) {
+      swipeLikesLeft = 10;
+      radarLikesLeft = 10;
+      superLikesLeft = 10;
+      lastLimitsResetAt = now;
+    }
+  }
+
   bool useSwipeLike() {
+    _checkDailyReset();
     if (isPremium || swipeLikesLeft > 0) {
       if (!isPremium) swipeLikesLeft--;
       return true;
@@ -151,6 +166,7 @@ class MotoUser {
   }
 
   bool useRadarLike() {
+    _checkDailyReset();
     if (isPremium || radarLikesLeft > 0) {
       if (!isPremium) radarLikesLeft--;
       return true;
@@ -159,6 +175,7 @@ class MotoUser {
   }
 
   bool useSuperLike() {
+    _checkDailyReset();
     if (isPremium || superLikesLeft > 0) {
       if (!isPremium) superLikesLeft--;
       return true;
@@ -212,6 +229,7 @@ class MotoUser {
       'swipeLikesLeft': swipeLikesLeft,
       'radarLikesLeft': radarLikesLeft,
       'superLikesLeft': superLikesLeft,
+      'lastLimitsResetAt': lastLimitsResetAt != null ? Timestamp.fromDate(lastLimitsResetAt!) : null,
       'latitude': latitude,
       'longitude': longitude,
       'locationName': locationName,
@@ -265,13 +283,20 @@ class MotoUser {
       lastActiveTime = DateTime.tryParse(map['lastActiveAt']);
     }
 
+    DateTime? limitsResetTime;
+    if (map['lastLimitsResetAt'] is Timestamp) {
+      limitsResetTime = (map['lastLimitsResetAt'] as Timestamp).toDate();
+    } else if (map['lastLimitsResetAt'] is String) {
+      limitsResetTime = DateTime.tryParse(map['lastLimitsResetAt']);
+    }
+
     // Check if subscription has expired
     bool isSubActive = map['isPremium'] ?? false;
     if (subEndTime != null && DateTime.now().isAfter(subEndTime)) {
       isSubActive = false;
     }
 
-    return MotoUser(
+    final user = MotoUser(
       id: id,
       nickname: map['nickname'] ?? 'Sürücü',
       email: map['email'] ?? '',
@@ -286,8 +311,9 @@ class MotoUser {
       subscriptionEndDate: subEndTime,
       vipTier: map['vipTier'] ?? (isSubActive ? 'monthly' : 'free'),
       swipeLikesLeft: (map['swipeLikesLeft'] as num?)?.toInt() ?? 10,
-      radarLikesLeft: (map['radarLikesLeft'] as num?)?.toInt() ?? 5,
-      superLikesLeft: (map['superLikesLeft'] as num?)?.toInt() ?? 1,
+      radarLikesLeft: (map['radarLikesLeft'] as num?)?.toInt() ?? 10,
+      superLikesLeft: (map['superLikesLeft'] as num?)?.toInt() ?? 10,
+      lastLimitsResetAt: limitsResetTime,
       latitude: (map['latitude'] as num?)?.toDouble() ?? 40.986,
       longitude: (map['longitude'] as num?)?.toDouble() ?? 29.026,
       locationName: map['locationName'] ?? 'Bilinmiyor',
@@ -311,6 +337,8 @@ class MotoUser {
       safetyScore: (map['safetyScore'] as num?)?.toInt() ?? 92,
       telemetryRidesCount: (map['telemetryRidesCount'] as num?)?.toInt() ?? 0,
     );
+    user._checkDailyReset();
+    return user;
   }
 
   factory MotoUser.fromFirestore(DocumentSnapshot doc) {

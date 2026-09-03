@@ -240,6 +240,7 @@ class _RadarDriverCardState extends State<RadarDriverCard> {
                       await FirestoreService().updateLikes(
                         widget.currentUser.id,
                         radarLikes: widget.currentUser.radarLikesLeft,
+                        lastLimitsResetAt: widget.currentUser.lastLimitsResetAt,
                       );
                       await FirestoreService().sendRadarSignal(
                         fromUserId: widget.currentUser.id,
@@ -294,6 +295,11 @@ class _RadarDriverCardState extends State<RadarDriverCard> {
                         fromUserId: widget.currentUser.id,
                         fromNickname: widget.currentUser.nickname,
                         toUser: widget.selectedRider,
+                      );
+                      await FirestoreService().updateLikes(
+                        widget.currentUser.id,
+                        superLikes: widget.currentUser.superLikesLeft,
+                        lastLimitsResetAt: widget.currentUser.lastLimitsResetAt,
                       );
                       if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(

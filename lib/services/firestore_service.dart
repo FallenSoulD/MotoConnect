@@ -103,11 +103,13 @@ class FirestoreService {
     }
   }
 
-  Future<void> updateLikes(String uid, {int? swipeLikes, int? radarLikes}) async {
+  Future<void> updateLikes(String uid, {int? swipeLikes, int? radarLikes, int? superLikes, DateTime? lastLimitsResetAt}) async {
     try {
       final Map<String, dynamic> data = {};
       if (swipeLikes != null) data['swipeLikesLeft'] = swipeLikes;
       if (radarLikes != null) data['radarLikesLeft'] = radarLikes;
+      if (superLikes != null) data['superLikesLeft'] = superLikes;
+      if (lastLimitsResetAt != null) data['lastLimitsResetAt'] = Timestamp.fromDate(lastLimitsResetAt);
       if (data.isNotEmpty) {
         data['updatedAt'] = FieldValue.serverTimestamp();
         await _usersRef.doc(uid).update(data);
@@ -397,7 +399,16 @@ class FirestoreService {
       for (final doc in cpSnap.docs) {
         await doc.reference.delete();
       }
-    } catch (_) {}
+
+      final cpAsRiderSnap = await _crossedPathsRef
+          .where('rider.id', isEqualTo: uid)
+          .get();
+      for (final doc in cpAsRiderSnap.docs) {
+        await doc.reference.delete();
+      }
+    } catch (e) {
+      debugPrint("deleteUserAccount crossed_paths error: $e");
+    }
 
     // 7. SOS uyarıları
     try {
@@ -654,12 +665,20 @@ class FirestoreService {
         .where('userId', isEqualTo: currentUserId)
         .snapshots()
         .map((snapshot) {
-      final list = snapshot.docs.map((doc) {
+      final List<CrossedPathEvent> validList = [];
+      for (final doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
-        return CrossedPathEvent.fromMap(data, id: doc.id);
-      }).toList();
-      list.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-      return list;
+        final event = CrossedPathEvent.fromMap(data, id: doc.id);
+        
+        if (event.rider.id.isEmpty) {
+          // Self-heal: Hatalı (boş ID'li) kayıtları temizle
+          doc.reference.delete().catchError((_) {}); 
+        } else {
+          validList.add(event);
+        }
+      }
+      validList.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      return validList;
     }).handleError((e) {
       debugPrint("streamCrossedPaths error: $e");
       return <CrossedPathEvent>[];
@@ -671,6 +690,8 @@ class FirestoreService {
     required MotoUser otherUser,
     required String locationName,
     double distanceKm = 0.5,
+    double? latitude,
+    double? longitude,
   }) async {
     try {
       final safeLocation = locationName.replaceAll(' ', '_');
@@ -681,6 +702,8 @@ class FirestoreService {
         'rider': otherUser.toMap(),
         'locationName': locationName,
         'distanceKm': distanceKm,
+        'latitude': latitude,
+        'longitude': longitude,
         'crossCount': FieldValue.increment(1),
         'timestamp': DateTime.now().millisecondsSinceEpoch,
         'updatedAt': FieldValue.serverTimestamp(),

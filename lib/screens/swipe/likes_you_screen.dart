@@ -148,14 +148,24 @@ class _LikesYouScreenState extends State<LikesYouScreen> {
     return Scaffold(
       backgroundColor: NeuColors.background,
       appBar: AppBar(
-        backgroundColor: NeuColors.surfaceDark,
-        title: const Row(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.flash_on, color: Colors.amber, size: 22),
-            SizedBox(width: 8),
-            Text(
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.flash_on, color: Colors.amber, size: 20),
+            ),
+            const SizedBox(width: 8),
+            const Text(
               "Sana Selektör Atanlar",
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17),
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16, letterSpacing: 0.5),
             ),
           ],
         ),
@@ -166,17 +176,19 @@ class _LikesYouScreenState extends State<LikesYouScreen> {
               child: GestureDetector(
                 onTap: () => VipGarajEkrani.showPaywall(context, currentUser: widget.currentUser),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.amber.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.amber.withValues(alpha: 0.6)),
+                    gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFF8C00)]),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(color: Colors.amber.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 2)),
+                    ],
                   ),
                   child: const Row(
                     children: [
-                      Icon(Icons.workspace_premium, color: Colors.amber, size: 16),
+                      Icon(Icons.workspace_premium, color: Colors.black, size: 14),
                       SizedBox(width: 4),
-                      Text("VIP Kilitli", style: TextStyle(color: Colors.amber, fontSize: 11, fontWeight: FontWeight.bold)),
+                      Text("VIP Kilitli", style: TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.w900)),
                     ],
                   ),
                 ),
@@ -184,252 +196,312 @@ class _LikesYouScreenState extends State<LikesYouScreen> {
             ),
         ],
       ),
-      body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: FirestoreService().streamIncomingSignals(widget.currentUser.id),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: Colors.deepOrange));
-          }
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [NeuColors.background, NeuColors.surfaceDark],
+          ),
+        ),
+        child: StreamBuilder<List<Map<String, dynamic>>>(
+          stream: FirestoreService().streamIncomingSignals(widget.currentUser.id),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator(color: Colors.deepOrange));
+            }
 
-          var signals = snapshot.data ?? [];
-          
-          // Filtreleme: Yalnızca engellenenleri gizle (Swipe'ta pass edilenler burada görünmeye devam eder)
-          signals = signals.where((signal) {
-            final senderId = signal['fromUserId'] ?? '';
-            return !widget.currentUser.isUserBlocked(senderId);
-          }).toList();
+            var signals = snapshot.data ?? [];
+            
+            // Filtreleme: Yalnızca engellenenleri gizle
+            signals = signals.where((signal) {
+              final senderId = signal['fromUserId'] ?? '';
+              return !widget.currentUser.isUserBlocked(senderId);
+            }).toList();
 
-          if (signals.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    NeuContainer(
-                      padding: const EdgeInsets.all(24),
-                      borderRadius: 30,
-                      depth: 4,
-                      child: const Icon(Icons.flash_off, size: 64, color: Colors.white38),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      "Henüz Sana Selektör Atan Yok",
-                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      "Radarda gazlayarak, sürüşlere katılarak ve profilini zenginleştirerek çevrendeki motorcuların dikkatini çek! 🏍️⚡",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white54, fontSize: 13, height: 1.4),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-
-          return Stack(
-            children: [
-              // SELEKTÖR ATANLAR IZGARASI
-              GridView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 14,
-                  mainAxisSpacing: 14,
-                  childAspectRatio: 0.75,
-                ),
-                itemCount: signals.length,
-                itemBuilder: (context, index) {
-                  final signal = signals[index];
-                  final fromNick = signal['fromNickname'] ?? 'Motorcu';
-                  final isSuper = signal['isSuperSignal'] == true;
-
-                  final senderRider = MotoUser(
-                    id: signal['fromUserId'] ?? '',
-                    nickname: fromNick,
-                    bio: '',
-                    ridingStyle: 'Motosiklet Tutkunu',
-                    experienceLevel: '1+ Yıl',
-                    garage: const [],
-                    imageUrls: const [],
-                  );
-
-                  return GestureDetector(
-                    onTap: () {
-                      if (!isVip) {
-                        VipGarajEkrani.showPaywall(context, currentUser: widget.currentUser);
-                      } else {
-                        _eslesmePenceresiGoster(senderRider);
-                      }
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: isSuper
-                            ? Colors.amber
-                            : (isVip ? Colors.deepOrange.withValues(alpha: 0.6) : Colors.white12),
-                        width: isSuper ? 2 : 1,
+            if (signals.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      NeuContainer(
+                        padding: const EdgeInsets.all(28),
+                        borderRadius: 40,
+                        depth: 6,
+                        child: Icon(Icons.flash_off, size: 72, color: Colors.white.withValues(alpha: 0.15)),
                       ),
-                      boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 6)],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(18),
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          // TEMSİLİ MOTOR ARKA PLAN RESMİ
-                          Image.network(
-                            "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=500",
-                            fit: BoxFit.cover,
+                      const SizedBox(height: 24),
+                      const Text(
+                        "Henüz Seni Bula Yok",
+                        style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 0.5),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        "Radarda gazlayarak, sürüşlere katılarak ve profilini zenginleştirerek çevrendeki motorcuların dikkatini çek! 🏍️⚡",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 14, height: 1.5),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return Stack(
+              children: [
+                GridView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 0.72,
+                  ),
+                  itemCount: signals.length,
+                  itemBuilder: (context, index) {
+                    final signal = signals[index];
+                    final fromNick = signal['fromNickname'] ?? 'Motorcu';
+                    final isSuper = signal['isSuperSignal'] == true;
+
+                    final senderRider = MotoUser(
+                      id: signal['fromUserId'] ?? '',
+                      nickname: fromNick,
+                      bio: '',
+                      ridingStyle: 'Motosiklet Tutkunu',
+                      experienceLevel: '1+ Yıl',
+                      garage: const [],
+                      imageUrls: const [],
+                    );
+
+                    return GestureDetector(
+                      onTap: () {
+                        if (!isVip) {
+                          VipGarajEkrani.showPaywall(context, currentUser: widget.currentUser);
+                        } else {
+                          _eslesmePenceresiGoster(senderRider);
+                        }
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: isSuper
+                                ? Colors.amber.withValues(alpha: 0.8)
+                                : (isVip ? Colors.deepOrange.withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.05)),
+                            width: isSuper ? 2 : 1.5,
                           ),
-
-                          // VIP DEĞİLSE BLUR EFEKTİ
-                          if (!isVip)
-                            BackdropFilter(
-                              filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                              child: Container(
-                                color: Colors.black.withValues(alpha: 0.4),
-                              ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: isSuper ? Colors.amber.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.5),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
                             ),
-
-                          // KARARTMA GRADYANI
-                          Container(
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [Colors.transparent, Colors.transparent, Colors.black87],
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              // TEMSİLİ MOTOR ARKA PLAN RESMİ
+                              Image.network(
+                                "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=500",
+                                fit: BoxFit.cover,
                               ),
-                            ),
-                          ),
 
-                          // SÜPER SELEKTÖR ROZETİ
-                          if (isSuper)
-                            Positioned(
-                              top: 10,
-                              right: 10,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.amber,
-                                  borderRadius: BorderRadius.circular(10),
+                              // VIP DEĞİLSE BLUR EFEKTİ VE KİLİT
+                              if (!isVip) ...[
+                                BackdropFilter(
+                                  filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                                  child: Container(
+                                    color: NeuColors.background.withValues(alpha: 0.6),
+                                  ),
                                 ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.star, color: Colors.black, size: 12),
-                                    SizedBox(width: 3),
-                                    Text("SÜPER", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 9)),
-                                  ],
-                                ),
-                              ),
-                            ),
-
-                          // BİLGİLER VEYA KİLİT
-                          Positioned(
-                            bottom: 12,
-                            left: 10,
-                            right: 10,
-                            child: isVip
-                                ? Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                Center(
+                                  child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black45,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+                                        ),
+                                        child: const Icon(Icons.lock, color: Colors.amber, size: 28),
+                                      ),
+                                      const SizedBox(height: 8),
                                       Text(
-                                        fromNick,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 16,
+                                        isSuper ? "Süper Selektör" : "Gizli Beğeni",
+                                        style: TextStyle(
+                                          color: isSuper ? Colors.amber : Colors.white70,
+                                          fontSize: 12,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        isSuper ? "⭐ Süper Selektör Çaktı!" : "⚡ Selektör Çaktı",
-                                        style: TextStyle(
-                                          color: isSuper ? Colors.amber : Colors.deepOrangeAccent,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  )
-                                : const Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.lock, color: Colors.amber, size: 28),
-                                      SizedBox(height: 4),
-                                      Text(
-                                        "VIP ile Gör",
-                                        style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 13),
-                                      ),
                                     ],
                                   ),
+                                ),
+                              ],
+
+                              // KARARTMA GRADYANI
+                              if (isVip)
+                                Container(
+                                  decoration: const BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [Colors.transparent, Colors.transparent, Colors.black87],
+                                    ),
+                                  ),
+                                ),
+
+                              // SÜPER SELEKTÖR ROZETİ
+                              if (isSuper)
+                                Positioned(
+                                  top: 12,
+                                  left: 12,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFF8C00)]),
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [
+                                        BoxShadow(color: Colors.amber.withValues(alpha: 0.4), blurRadius: 4),
+                                      ],
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.auto_awesome, color: Colors.black, size: 12),
+                                        SizedBox(width: 4),
+                                        Text("SÜPER", style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 0.5)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+
+                              // BİLGİLER VEYA KİLİT METNİ (ALT KISIM)
+                              Positioned(
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: isVip ? null : BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.5),
+                                  ),
+                                  child: isVip
+                                      ? Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              fromNick,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 17,
+                                                fontWeight: FontWeight.w800,
+                                                letterSpacing: 0.3,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Row(
+                                              children: [
+                                                Icon(isSuper ? Icons.bolt : Icons.flash_on, 
+                                                  color: isSuper ? Colors.amber : Colors.deepOrange, size: 14),
+                                                const SizedBox(width: 4),
+                                                const Text(
+                                                  "Selektör Attı",
+                                                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        )
+                                      : Column(
+                                          children: [
+                                            const Text(
+                                              "Görmek İçin",
+                                              style: TextStyle(color: Colors.white54, fontSize: 11),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              "VIP'ye Geç",
+                                              style: TextStyle(color: Colors.amber[300], fontSize: 13, fontWeight: FontWeight.bold),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ],
+                                        ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                
+                // EĞER VIP DEĞİLSE ALTTA SABİT VIP AÇILIŞ ÇUBUĞU
+                if (!isVip)
+                  Positioned(
+                    bottom: 16,
+                    left: 16,
+                    right: 16,
+                    child: NeuContainer(
+                      padding: const EdgeInsets.all(16),
+                      borderRadius: 20,
+                      depth: 6,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.workspace_premium, color: Colors.amber, size: 22),
+                              SizedBox(width: 8),
+                              Text(
+                                "Sana Selektör Atanları Gör",
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            "Sana selektör atan sürücülerin kim olduğunu öğrenmek ve doğrudan eşleşmek için VIP Garaj'a katılın.",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.white60, fontSize: 11.5),
+                          ),
+                          const SizedBox(height: 14),
+                          NeuButton(
+                            color: Colors.amber[700]!,
+                            textColor: Colors.black,
+                            borderRadius: 14,
+                            depth: 3,
+                            onPressed: () => VipGarajEkrani.showPaywall(context, currentUser: widget.currentUser),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.lock_open, color: Colors.black, size: 18),
+                                SizedBox(width: 8),
+                                Text("VIP Kilidini Aç 👑", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+                              ],
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ),
-                );
-                },
-              ),
-
-              // EĞER VIP DEĞİLSE ALTTA SABİT VIP AÇILIŞ ÇUBUĞU
-              if (!isVip)
-                Positioned(
-                  bottom: 16,
-                  left: 16,
-                  right: 16,
-                  child: NeuContainer(
-                    padding: const EdgeInsets.all(16),
-                    borderRadius: 20,
-                    depth: 6,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.workspace_premium, color: Colors.amber, size: 22),
-                            SizedBox(width: 8),
-                            Text(
-                              "Sana Selektör Atanları Gör",
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          "Sana selektör atan sürücülerin kim olduğunu öğrenmek ve doğrudan eşleşmek için VIP Garaj'a katılın.",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.white60, fontSize: 11.5),
-                        ),
-                        const SizedBox(height: 14),
-                        NeuButton(
-                          color: Colors.amber[700]!,
-                          textColor: Colors.black,
-                          borderRadius: 14,
-                          depth: 3,
-                          onPressed: () => VipGarajEkrani.showPaywall(context, currentUser: widget.currentUser),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.lock_open, color: Colors.black, size: 18),
-                              SizedBox(width: 8),
-                              Text("VIP Kilidini Aç 👑", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }

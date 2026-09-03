@@ -22,7 +22,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     FirestoreService().purgeAllTestUsers();
   }
 
@@ -202,6 +202,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
           labelColor: Colors.redAccent,
           unselectedLabelColor: Colors.white60,
           tabs: const [
+            Tab(icon: Icon(Icons.people_alt, size: 20), text: "Kullanıcı Yönetimi"),
             Tab(icon: Icon(Icons.report_problem_outlined, size: 20), text: "Şikayetler"),
             Tab(icon: Icon(Icons.campaign_outlined, size: 20), text: "Duyuru Yayınla"),
             Tab(icon: Icon(Icons.people_outline, size: 20), text: "Admin Yönetimi"),
@@ -212,6 +213,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
       body: TabBarView(
         controller: _tabController,
         children: [
+          _buildUserManagementTab(),
           _buildReportsTab(),
           _buildAnnouncementTab(),
           _buildAdminListTab(),
@@ -976,5 +978,138 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
         );
       }
     );
+  }
+
+  /// KULLANICI YÖNETİMİ SEKMESİ (TEST HESAPLARINI SİLMEK İÇİN)
+  Widget _buildUserManagementTab() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('users').snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: Colors.redAccent));
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text("Sistemde hiç kullanıcı bulunmuyor.", style: TextStyle(color: Colors.white70)));
+        }
+
+        final users = snapshot.data!.docs;
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: users.length,
+          itemBuilder: (context, index) {
+            final userDoc = users[index];
+            final data = userDoc.data() as Map<String, dynamic>;
+            final userId = userDoc.id;
+            final nickname = data['nickname'] ?? 'İsimsiz';
+            final email = data['email'] ?? 'E-Posta Yok';
+            final primaryMotor = data['primaryMotor'] ?? '-';
+            final isVerified = data['isVerified'] ?? false;
+            final isBanned = data['isBanned'] ?? false;
+
+            return Card(
+              color: const Color(0xFF222222),
+              margin: const EdgeInsets.only(bottom: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: isBanned ? Colors.red : (isVerified ? Colors.blue : Colors.grey[800]),
+                  child: Icon(
+                    isBanned ? Icons.block : Icons.person,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                title: Text(
+                  nickname,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(
+                  "$email\nMotor: $primaryMotor",
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                ),
+                isThreeLine: true,
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        (data['isPremium'] ?? false) ? Icons.star : Icons.star_border,
+                        color: (data['isPremium'] ?? false) ? Colors.amber : Colors.white54,
+                      ),
+                      tooltip: (data['isPremium'] ?? false) ? "VIP İptal Et" : "VIP Yap",
+                      onPressed: () async {
+                        final bool isPremium = data['isPremium'] ?? false;
+                        await FirestoreService().updateVipStatus(
+                          userId, 
+                          !isPremium,
+                          subscriptionEndDate: !isPremium ? DateTime.now().add(const Duration(days: 3650)) : null, // 10 yıllık VIP
+                        );
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(!isPremium ? "$nickname VIP yapıldı!" : "$nickname VIP iptal edildi!"),
+                              backgroundColor: !isPremium ? Colors.amber[800] : Colors.grey,
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_forever, color: Colors.redAccent),
+                      tooltip: "Kullanıcıyı Veritabanından Sil",
+                      onPressed: () => _deleteUserConfirm(userId, nickname),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteUserConfirm(String userId, String nickname) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        title: const Text("Kullanıcıyı Sil", style: TextStyle(color: Colors.white)),
+        content: Text(
+          "'$nickname' adlı kullanıcı veritabanından kalıcı olarak silinecek. Emin misiniz? (Bu işlem Auth tarafını silmez, sadece haritadan ve sistemden kaldırır)",
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("İptal", style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("SİL", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await FirestoreService().deleteUserAccount(userId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("'$nickname' başarıyla silindi."), backgroundColor: Colors.green),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Silme başarısız: $e"), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
   }
 }
