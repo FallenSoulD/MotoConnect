@@ -43,9 +43,13 @@ class _VerificationSheetContentState extends State<_VerificationSheetContent> {
   ConfirmationResult? _confirmationResult;
 
   Future<void> _sendSmsCode() async {
-    final phone = _phoneController.text.trim();
-    if (phone.length < 10) {
-      setState(() => _infoMessage = "Lütfen geçerli bir telefon numarası girin (+90...)");
+    String phone = _phoneController.text.trim();
+    phone = phone.replaceAll(RegExp(r'\s+'), '');
+    if (phone.length < 10 || !phone.startsWith('+')) {
+      setState(() {
+        _infoMessage = "Lütfen geçerli bir telefon numarası girin (+90...)";
+        _isSending = false;
+      });
       return;
     }
 
