@@ -78,5 +78,16 @@
 		<string>ca-app-pub-3940256099942544~1458002511</string>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>CFBundleURLTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>com.googleusercontent.apps.331540286697-buf8pil3a75ee8s0c1eib3n2ftf0c830</string>
+				</array>
+			</dict>
+		</array>
 	</dict>
 </plist>
