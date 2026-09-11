@@ -7,6 +7,7 @@ import '../../widgets/neumorphic_widgets.dart';
 import '../garage/legal_docs_sheet.dart';
 import '../main_screen.dart';
 import '../../main.dart';
+import 'package:flutter/foundation.dart';
 import '../../utils/profanity_filter.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -372,71 +373,74 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 18),
 
-                      // Apple ile Giriş Butonu
-                      NeuButton(
-                        color: Colors.white,
-                        textColor: Colors.black,
-                        iconColor: Colors.black,
-                        borderRadius: 14,
-                        isLoading: _isLoading,
-                        onPressed: _isLoading ? null : _handleAppleAuth,
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.apple, color: Colors.black, size: 22),
-                            SizedBox(width: 8),
-                            Text(
-                              "Apple ile Giriş Yap",
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 14.5,
-                                fontWeight: FontWeight.w700,
+                      if (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS)
+                        // Apple ile Giriş Butonu
+                        NeuButton(
+                          color: Colors.white,
+                          textColor: Colors.black,
+                          iconColor: Colors.black,
+                          borderRadius: 14,
+                          isLoading: _isLoading,
+                          onPressed: _isLoading ? null : _handleAppleAuth,
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.apple, color: Colors.black, size: 22),
+                              SizedBox(width: 8),
+                              Text(
+                                "Apple ile Giriş Yap",
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
+
                       const SizedBox(height: 10),
 
-                      // Google ile Giriş Butonu
-                      NeuButton(
-                        color: NeuColors.surfaceLight,
-                        borderRadius: 14,
-                        isLoading: _isLoading,
-                        onPressed: _isLoading ? null : _handleGoogleAuth,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: 20,
-                              height: 20,
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Center(
-                                child: Text(
-                                  "G",
-                                  style: TextStyle(
-                                    color: Color(0xFF4285F4),
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w900,
+                      if (defaultTargetPlatform != TargetPlatform.iOS && defaultTargetPlatform != TargetPlatform.macOS)
+                        // Google ile Giriş Butonu
+                        NeuButton(
+                          color: NeuColors.surfaceLight,
+                          borderRadius: 14,
+                          isLoading: _isLoading,
+                          onPressed: _isLoading ? null : _handleGoogleAuth,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 20,
+                                height: 20,
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Center(
+                                  child: Text(
+                                    "G",
+                                    style: TextStyle(
+                                      color: Color(0xFF4285F4),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w900,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 10),
-                            const Text(
-                              "Google ile Giriş Yap",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 14.5,
-                                fontWeight: FontWeight.w600,
+                              const SizedBox(width: 10),
+                              const Text(
+                                "Google ile Giriş Yap",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
