@@ -69,12 +69,16 @@ class _VerificationSheetContentState extends State<_VerificationSheetContent> {
             await _confirmAndLink(credential);
           },
           verificationFailed: (FirebaseAuthException e) {
-            setState(() => _infoMessage = "Doğrulama hatası: ${e.message}");
+            setState(() {
+              _infoMessage = "Doğrulama hatası: ${e.message}";
+              _isSending = false;
+            });
           },
           codeSent: (String verificationId, int? resendToken) {
             setState(() {
               _verificationId = verificationId;
               _isCodeSent = true;
+              _isSending = false;
               _infoMessage = "✉️ SMS Kodu gönderildi.";
             });
           },
@@ -87,10 +91,9 @@ class _VerificationSheetContentState extends State<_VerificationSheetContent> {
       // Hata durumunda test amaçlı kod gönderilmiş gibi davranalım (Firebase ayarlı değilse bypass)
       setState(() {
         _isCodeSent = true;
+        _isSending = false;
         _infoMessage = "Firebase hatası alındı ancak test için SMS adımına geçiliyor. (Geliştirici Modu)";
       });
-    } finally {
-      if (mounted) setState(() => _isSending = false);
     }
   }
 
