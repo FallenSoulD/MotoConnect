@@ -34,10 +34,10 @@ class PurchaseService {
 
   static const String entitlementId = "vip"; // RevenueCat Entitlement ID
 
-  // RevenueCat API Anahtarları (Test & Canlı Ortam)
-  static const String _androidApiKey = "goog_sandbox_motoconnect_monthly";
-  static const String _iosApiKey = "appl_sandbox_motoconnect_monthly";
-
+  // RevenueCat API Anahtarları
+  // TODO: Apple Developer hesabınızı açıp RevenueCat'e bağladıktan sonra iOS anahtarını da ekleyin
+  static const String _androidApiKey = "goog_cmNhqXgtIrRrQcbvSGhuHveaXvo";
+  static const String _iosApiKey = "appl_sandbox_motoconnect_monthly"; // Şimdilik Sandbox
   // Tanımlı Aylık VIP Abonelik Planı
   static const List<ProductPackage> subscriptions = [
     ProductPackage(
@@ -63,14 +63,6 @@ class PurchaseService {
   static const List<ProductPackage> vipSubscriptions = subscriptions;
 
   static const List<ProductPackage> consumables = [
-    ProductPackage(
-      id: "boost_pack_5",
-      title: "5'li Radar Boost 🔥",
-      description: "30 dakika boyunca haritada alevli parılda, 10x daha çok görün.",
-      priceString: "₺69,99",
-      type: ProductType.consumable,
-      icon: Icons.local_fire_department,
-    ),
     ProductPackage(
       id: "super_signal_10",
       title: "10'lu Süper Selektör ⭐",
@@ -248,27 +240,7 @@ class PurchaseService {
     }
   }
 
-  /// Kredi Kartı & Sipariş Formu ile VIP Satın Alma İşlemini Tamamlar
-  Future<bool> processCheckoutOrder(
-    BuildContext context, {
-    required MotoUser user,
-    required ProductPackage package,
-    required String cardHolderName,
-    required String cardNumber,
-    String? billingAddress,
-  }) async {
-    try {
-      final expirationDate = package.id.contains("yearly")
-          ? DateTime.now().add(const Duration(days: 365))
-          : DateTime.now().add(const Duration(days: 30));
 
-      await _grantBenefits(user, package, subscriptionEndDate: expirationDate);
-      return true;
-    } catch (e) {
-      debugPrint("processCheckoutOrder error: $e");
-      return false;
-    }
-  }
 
   /// Satın alma faydalarını tanımlar ve Firestore'a senkronize eder
   Future<void> _grantBenefits(
@@ -287,9 +259,6 @@ class PurchaseService {
         true,
         subscriptionEndDate: endDate,
       );
-    } else if (package.id.contains("boost")) {
-      user.radarLikesLeft += 5;
-      await FirestoreService().updateLikes(user.id, radarLikes: user.radarLikesLeft);
     } else if (package.id.contains("super")) {
       user.swipeLikesLeft += 10;
       await FirestoreService().updateLikes(user.id, swipeLikes: user.swipeLikesLeft);

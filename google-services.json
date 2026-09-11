@@ -1,0 +1,83 @@
+{
+  "project_info": {
+    "project_number": "331540286697",
+    "firebase_url": "https://motoconnect-c3412-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "motoconnect-c3412",
+    "storage_bucket": "motoconnect-c3412.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:331540286697:android:07b80248b67312b0c07478",
+        "android_client_info": {
+          "package_name": "com.example.motoconnect"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "331540286697-buf8pil3a75ee8s0c1eib3n2ftf0c830.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDZZ8Bes-IbF2AV2tZxwkaEZgdKUM7coBw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "331540286697-buf8pil3a75ee8s0c1eib3n2ftf0c830.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "331540286697-ruugl6uchmlsb9n2a5bruh7pj70tmmsl.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.motoconnect"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:331540286697:android:77fdba82737a037ac07478",
+        "android_client_info": {
+          "package_name": "com.fallensould.motoconnect"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "331540286697-buf8pil3a75ee8s0c1eib3n2ftf0c830.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDZZ8Bes-IbF2AV2tZxwkaEZgdKUM7coBw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "331540286697-buf8pil3a75ee8s0c1eib3n2ftf0c830.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "331540286697-ruugl6uchmlsb9n2a5bruh7pj70tmmsl.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.motoconnect"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

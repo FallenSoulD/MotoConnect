@@ -21,6 +21,7 @@ class _SwipeScreenState extends State<SwipeScreen> {
   List<MotoUser> karsilasilacakProfiller = [];
   bool _yukleniyor = true;
   String _seciliTarzFiltresi = "Tümü";
+  bool _sadeceDogrulanmislar = false;
   int _swipeCount = 0;
 
   final List<String> _tarzlar = ["Tümü", "Racing", "Naked", "Enduro", "Cruiser"];
@@ -48,13 +49,14 @@ class _SwipeScreenState extends State<SwipeScreen> {
       // 1. AYNI ROTADAN GEÇEN / KESİŞEN SÜRÜCÜLER
       final crossedEvents = await FirestoreService()
           .streamCrossedPaths(widget.aktifKullanici.id)
-          .first;
+          .first
+          .timeout(const Duration(seconds: 4), onTimeout: () => []);
 
       // 2. VERİTABANINDAN GENEL KULLANICILAR (Aynı hobilere/tarza sahip olanları eşleştirmek için)
       final allUsers = await FirestoreService().getRadarUsersOnce(
           currentUserId: widget.aktifKullanici.id, 
           currentUserEmail: widget.aktifKullanici.email
-      );
+      ).timeout(const Duration(seconds: 4), onTimeout: () => []);
 
       final Map<String, MotoUser> uniqueRiders = {};
       final String myEmail = widget.aktifKullanici.email.trim().toLowerCase();
@@ -96,6 +98,10 @@ class _SwipeScreenState extends State<SwipeScreen> {
         return u.ridingStyle.toLowerCase().contains(_seciliTarzFiltresi.toLowerCase()) ||
             u.primaryMotorType.toLowerCase().contains(_seciliTarzFiltresi.toLowerCase());
       }).toList();
+    }
+
+    if (_sadeceDogrulanmislar) {
+      karsilasilacakProfiller = karsilasilacakProfiller.where((u) => u.isVerified).toList();
     }
 
     // Ortak özellikleri (tarz, motor tipi veya HOBİLERİ) olanları puanlayıp en üste al
@@ -259,12 +265,7 @@ class _SwipeScreenState extends State<SwipeScreen> {
 
     if (isSuperLike) {
       if (!widget.aktifKullanici.useSuperLike()) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Günlük Süper Selektör hakkın doldu! VIP Garaj ile limitsiz."),
-            backgroundColor: Colors.amber,
-          ),
-        );
+        VipGarajEkrani.showPaywall(context, currentUser: widget.aktifKullanici);
         return;
       }
       FirestoreService().sendSuperSignal(
@@ -280,12 +281,7 @@ class _SwipeScreenState extends State<SwipeScreen> {
       _eslesmeEkraniGoster(degerlendirilenKullanici, isSuperMatch: true);
     } else if (begenildiMi) {
       if (!widget.aktifKullanici.useSwipeLike()) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Günlük Swipe limitin doldu! VIP Garaj\'a geçerek limitsiz kaydır.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        VipGarajEkrani.showPaywall(context, currentUser: widget.aktifKullanici);
         return;
       }
       FirestoreService().updateLikes(
@@ -432,47 +428,85 @@ class _SwipeScreenState extends State<SwipeScreen> {
               },
             ),
             
-            // TARZ FİLTRELEME ÇİPLERİ
+            // TARZ & DOĞRULAMA FİLTRELEME ÇİPLERİ
             Container(
               height: 48,
               padding: const EdgeInsets.symmetric(vertical: 4),
-              child: ListView.builder(
+              child: ListView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _tarzlar.length,
-                itemBuilder: (context, index) {
-                  final tarz = _tarzlar[index];
-                  final isSelected = _seciliTarzFiltresi == tarz;
-                  return Padding(
+                children: [
+                  // Sadece Doğrulanmışlar Filtresi
+                  Padding(
                     padding: const EdgeInsets.only(right: 8.0),
                     child: GestureDetector(
                       onTap: () {
                         setState(() {
-                          _seciliTarzFiltresi = tarz;
+                          _sadeceDogrulanmislar = !_sadeceDogrulanmislar;
                           _filtreleProfiller();
                         });
                       },
                       child: NeuContainer(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                         borderRadius: 14,
-                        style: isSelected ? NeuStyle.sunken : NeuStyle.raised,
-                        color: isSelected ? NeuColors.accentOrange.withValues(alpha: 0.2) : NeuColors.surface,
-                        borderColor: isSelected ? NeuColors.accentOrange : Colors.white.withValues(alpha: 0.05),
-                        borderWidth: isSelected ? 1.5 : 1,
+                        style: _sadeceDogrulanmislar ? NeuStyle.sunken : NeuStyle.raised,
+                        color: _sadeceDogrulanmislar ? Colors.blueAccent.withValues(alpha: 0.2) : NeuColors.surface,
+                        borderColor: _sadeceDogrulanmislar ? Colors.blueAccent : Colors.white.withValues(alpha: 0.05),
+                        borderWidth: _sadeceDogrulanmislar ? 1.5 : 1,
                         child: Center(
-                          child: Text(
-                            tarz,
-                            style: TextStyle(
-                              color: isSelected ? NeuColors.accentOrange : Colors.white70,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              fontSize: 12,
-                            ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.verified, color: _sadeceDogrulanmislar ? Colors.blueAccent : Colors.white70, size: 14),
+                              const SizedBox(width: 4),
+                              Text(
+                                "Onaylılar",
+                                style: TextStyle(
+                                  color: _sadeceDogrulanmislar ? Colors.blueAccent : Colors.white70,
+                                  fontWeight: _sadeceDogrulanmislar ? FontWeight.bold : FontWeight.normal,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
                     ),
-                  );
-                },
+                  ),
+                  
+                  // Tarz Filtreleri
+                  ..._tarzlar.map((tarz) {
+                    final isSelected = _seciliTarzFiltresi == tarz;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _seciliTarzFiltresi = tarz;
+                            _filtreleProfiller();
+                          });
+                        },
+                        child: NeuContainer(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          borderRadius: 14,
+                          style: isSelected ? NeuStyle.sunken : NeuStyle.raised,
+                          color: isSelected ? NeuColors.accentOrange.withValues(alpha: 0.2) : NeuColors.surface,
+                          borderColor: isSelected ? NeuColors.accentOrange : Colors.white.withValues(alpha: 0.05),
+                          borderWidth: isSelected ? 1.5 : 1,
+                          child: Center(
+                            child: Text(
+                              tarz,
+                              style: TextStyle(
+                                color: isSelected ? NeuColors.accentOrange : Colors.white70,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ],
               ),
             ),
 

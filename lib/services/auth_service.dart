@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'dart:math';
+
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+
 import '../models/user_model.dart';
 import 'firestore_service.dart';
 import 'purchase_service.dart';
@@ -16,10 +18,8 @@ class AuthService {
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: [
-      'email',
-      'https://www.googleapis.com/auth/userinfo.profile',
-    ],
+    scopes: ['email', 'https://www.googleapis.com/auth/userinfo.profile'],
+    serverClientId: '331540286697-buf8pil3a75ee8s0c1eib3n2ftf0c830.apps.googleusercontent.com',
   );
 
   /// 1. GOOGLE SİGN-IN (Android, iOS & Web Desteği)
@@ -41,7 +41,8 @@ class AuthService {
           return null;
         }
 
-        final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+        final GoogleSignInAuthentication googleAuth =
+            await googleUser.authentication;
         final OAuthCredential credential = GoogleAuthProvider.credential(
           accessToken: googleAuth.accessToken,
           idToken: googleAuth.idToken,
@@ -56,11 +57,16 @@ class AuthService {
 
       // Aynı e-postanın başka bir hesapta olup olmadığını kontrol et
       if (email.isNotEmpty) {
-        final isTaken = await FirestoreService().isEmailTakenByOtherUser(firebaseUser.uid, email);
+        final isTaken = await FirestoreService().isEmailTakenByOtherUser(
+          firebaseUser.uid,
+          email,
+        );
         if (isTaken) {
           // Başka bir hesap var, bu yüzden bu yeni auth hesabını da silebiliriz ki auth çöplük olmasın
           await firebaseUser.delete();
-          throw Exception("Bu e-posta adresi başka bir kayıt yöntemi ile zaten kullanılıyor. Lütfen doğru yöntemle giriş yapın.");
+          throw Exception(
+            "Bu e-posta adresi başka bir kayıt yöntemi ile zaten kullanılıyor. Lütfen doğru yöntemle giriş yapın.",
+          );
         }
       }
 
@@ -70,9 +76,13 @@ class AuthService {
       } catch (_) {}
 
       // Kullanıcının Firestore Profilini Getir veya Yeni Oluştur
-      var userProfile = await FirestoreService().getUserProfile(firebaseUser.uid);
+      var userProfile = await FirestoreService().getUserProfile(
+        firebaseUser.uid,
+      );
       if (userProfile == null) {
-        final nickname = (firebaseUser.displayName != null && firebaseUser.displayName!.isNotEmpty)
+        final nickname =
+            (firebaseUser.displayName != null &&
+                firebaseUser.displayName!.isNotEmpty)
             ? firebaseUser.displayName!
             : (email.isNotEmpty ? email.split('@').first : "Google Sürücüsü");
         final photoUrl = firebaseUser.photoURL ?? "";
@@ -81,7 +91,8 @@ class AuthService {
           id: firebaseUser.uid,
           nickname: nickname,
           email: email,
-          bio: "Google hesabı ($email) ile bağlandı. 🏍️",
+          bio: "",
+          gender: "Belirtmek İstemiyorum",
           ridingStyle: "Şehir İçi ve Manzara",
           experienceLevel: "1 Yıl",
           nextGoal: "Yeni rotalar keşfetmek",
@@ -113,7 +124,8 @@ class AuthService {
         appleProvider.addScope('email');
         appleProvider.addScope('name');
         userCredential = await _auth.signInWithPopup(appleProvider);
-      } else if (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS) {
+      } else if (defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.macOS) {
         // iOS & macOS: Yerel Face ID / Touch ID / Apple ID ile Güvenli Giriş
         final rawNonce = _generateNonce();
         final nonce = _sha256ofString(rawNonce);
@@ -126,15 +138,17 @@ class AuthService {
           nonce: nonce,
         );
 
-        if (appleCredential.givenName != null || appleCredential.familyName != null) {
+        if (appleCredential.givenName != null ||
+            appleCredential.familyName != null) {
           appleGivenName = appleCredential.givenName;
           appleFamilyName = appleCredential.familyName;
         }
 
-        final OAuthCredential credential = OAuthProvider('apple.com').credential(
-          idToken: appleCredential.identityToken,
-          rawNonce: rawNonce,
-        );
+        final OAuthCredential credential = OAuthProvider('apple.com')
+            .credential(
+              idToken: appleCredential.identityToken,
+              rawNonce: rawNonce,
+            );
 
         userCredential = await _auth.signInWithCredential(credential);
       } else {
@@ -154,7 +168,8 @@ class AuthService {
       String nickname = "";
       if (appleGivenName != null && appleGivenName.isNotEmpty) {
         nickname = "$appleGivenName ${appleFamilyName ?? ''}".trim();
-      } else if (firebaseUser.displayName != null && firebaseUser.displayName!.isNotEmpty) {
+      } else if (firebaseUser.displayName != null &&
+          firebaseUser.displayName!.isNotEmpty) {
         nickname = firebaseUser.displayName!;
       } else if (email.isNotEmpty) {
         nickname = email.split('@').first;
@@ -163,10 +178,15 @@ class AuthService {
       }
       // Aynı e-postanın başka bir hesapta olup olmadığını kontrol et
       if (email.isNotEmpty) {
-        final isTaken = await FirestoreService().isEmailTakenByOtherUser(firebaseUser.uid, email);
+        final isTaken = await FirestoreService().isEmailTakenByOtherUser(
+          firebaseUser.uid,
+          email,
+        );
         if (isTaken) {
           await firebaseUser.delete();
-          throw Exception("Bu e-posta adresi başka bir kayıt yöntemi ile zaten kullanılıyor. Lütfen doğru yöntemle giriş yapın.");
+          throw Exception(
+            "Bu e-posta adresi başka bir kayıt yöntemi ile zaten kullanılıyor. Lütfen doğru yöntemle giriş yapın.",
+          );
         }
       }
 
@@ -176,18 +196,23 @@ class AuthService {
       } catch (_) {}
 
       // Kullanıcının Firestore Profilini Getir veya Yeni Oluştur
-      var userProfile = await FirestoreService().getUserProfile(firebaseUser.uid);
+      var userProfile = await FirestoreService().getUserProfile(
+        firebaseUser.uid,
+      );
       if (userProfile == null) {
         userProfile = MotoUser(
           id: firebaseUser.uid,
           nickname: nickname,
           email: email,
-          bio: "Apple Kimliği ($email) ile bağlandı. 🏍️ ",
+          bio: "Apple Kimliği ile bağlandı. 🏍️ ",
+          gender: "Belirtmek İstemiyorum",
           ridingStyle: "Şehir İçi ve Manzara",
           experienceLevel: "1 Yıl",
           nextGoal: "Yeni rotalar keşfetmek",
           garage: [],
-          imageUrls: (firebaseUser.photoURL != null && firebaseUser.photoURL!.isNotEmpty)
+          imageUrls:
+              (firebaseUser.photoURL != null &&
+                  firebaseUser.photoURL!.isNotEmpty)
               ? [firebaseUser.photoURL!]
               : [],
           hobbies: ["☕ Gece Kahvesi", "🎧 Intercom Muhabbeti"],
@@ -195,7 +220,9 @@ class AuthService {
 
         await FirestoreService().createUserProfile(userProfile, email: email);
       } else {
-        if (nickname.isNotEmpty && (userProfile.nickname.isEmpty || userProfile.nickname == "Apple Sürücüsü")) {
+        if (nickname.isNotEmpty &&
+            (userProfile.nickname.isEmpty ||
+                userProfile.nickname == "Apple Sürücüsü")) {
           userProfile.nickname = nickname;
           if (email.isNotEmpty && userProfile.email.isEmpty) {
             userProfile.email = email;
@@ -207,13 +234,16 @@ class AuthService {
       return userProfile;
     } on SignInWithAppleAuthorizationException catch (e) {
       debugPrint("Apple Authorization Exception: ${e.code} - ${e.message}");
-      if (e.code == AuthorizationErrorCode.canceled || e.code == AuthorizationErrorCode.unknown) {
+      if (e.code == AuthorizationErrorCode.canceled ||
+          e.code == AuthorizationErrorCode.unknown) {
         return null;
       }
       rethrow;
     } on FirebaseAuthException catch (e) {
       debugPrint("Apple FirebaseAuthException: ${e.code} - ${e.message}");
-      if (e.code == 'canceled' || e.code == 'popup-closed-by-user' || e.code == 'user-cancelled') {
+      if (e.code == 'canceled' ||
+          e.code == 'popup-closed-by-user' ||
+          e.code == 'user-cancelled') {
         return null;
       }
       rethrow;
@@ -225,9 +255,13 @@ class AuthService {
 
   /// Güvenli Apple Nonce Üreticisi
   String _generateNonce([int length = 32]) {
-    const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    const charset =
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
     final random = Random.secure();
-    return List.generate(length, (_) => charset[random.nextInt(charset.length)]).join();
+    return List.generate(
+      length,
+      (_) => charset[random.nextInt(charset.length)],
+    ).join();
   }
 
   /// SHA256 Şifreleyici
@@ -239,7 +273,10 @@ class AuthService {
 
   /// 3. E-POSTA & ŞİFRE GİRİŞİ VEYA KAYIT
   Future<MotoUser?> signInWithEmail(String email, String password) async {
-    final credential = await _auth.signInWithEmailAndPassword(email: email, password: password);
+    final credential = await _auth.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
     final user = credential.user;
     if (user == null) return null;
 
@@ -247,8 +284,16 @@ class AuthService {
     return await FirestoreService().getUserProfile(user.uid);
   }
 
-  Future<MotoUser?> signUpWithEmail(String email, String password, String nickname) async {
-    final credential = await _auth.createUserWithEmailAndPassword(email: email, password: password);
+  Future<MotoUser?> signUpWithEmail(
+    String email,
+    String password,
+    String nickname, {
+    String gender = "Belirtmek İstemiyorum",
+  }) async {
+    final credential = await _auth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
     final user = credential.user;
     if (user == null) return null;
 
@@ -257,9 +302,12 @@ class AuthService {
 
     final userProfile = MotoUser(
       id: user.uid,
-      nickname: nickname.isNotEmpty ? nickname : (user.email?.split('@').first ?? "Sürücü"),
+      nickname: nickname.isNotEmpty
+          ? nickname
+          : (user.email?.split('@').first ?? "Sürücü"),
       email: email,
       bio: "Merhaba! MotoConnect'e katıldım. Tekerin düz bassın! 🏍️",
+      gender: gender,
       ridingStyle: "Şehir İçi ve Manzara",
       experienceLevel: "1 Yıl",
       nextGoal: "Yeni rotalar keşfetmek",
@@ -273,6 +321,58 @@ class AuthService {
     );
 
     await FirestoreService().createUserProfile(userProfile, email: email);
+    return userProfile;
+  }
+
+  // ---------------- PHONE AUTHENTICATION ----------------
+  Future<void> verifyPhoneNumber({
+    required String phoneNumber,
+    required Function(String verificationId, int? resendToken) codeSent,
+    required Function(FirebaseAuthException e) verificationFailed,
+  }) async {
+    await _auth.verifyPhoneNumber(
+      phoneNumber: phoneNumber,
+      verificationCompleted: (PhoneAuthCredential credential) async {
+        // Otomatik doğrulama Android'de bazen desteklenir
+      },
+      verificationFailed: verificationFailed,
+      codeSent: codeSent,
+      codeAutoRetrievalTimeout: (String verificationId) {},
+    );
+  }
+
+  Future<MotoUser?> signInWithPhoneOTP({
+    required String verificationId,
+    required String smsCode,
+    String? nickname,
+  }) async {
+    final credential = PhoneAuthProvider.credential(
+      verificationId: verificationId,
+      smsCode: smsCode,
+    );
+
+    final userCredential = await _auth.signInWithCredential(credential);
+    final user = userCredential.user;
+    if (user == null) return null;
+
+    var userProfile = await FirestoreService().getUserProfile(user.uid);
+    if (userProfile == null) {
+      userProfile = MotoUser(
+        id: user.uid,
+        nickname: (nickname != null && nickname.isNotEmpty) ? nickname : "Sürücü",
+        email: "",
+        phoneNumber: user.phoneNumber ?? "",
+        bio: "Merhaba! MotoConnect'e katıldım. Tekerin düz bassın! 🏍️",
+        gender: "Belirtmek İstemiyorum",
+        ridingStyle: "Şehir İçi ve Manzara",
+        experienceLevel: "Yeni Başlayan",
+        nextGoal: "Yeni rotalar keşfetmek",
+        garage: [],
+        imageUrls: [],
+        hobbies: ["🏍️ Sürüş", "☕ Gece Kahvesi"],
+      );
+      await FirestoreService().createUserProfile(userProfile);
+    }
     return userProfile;
   }
 

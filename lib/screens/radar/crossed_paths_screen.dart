@@ -43,7 +43,10 @@ class _CrossedPathsScreenState extends State<CrossedPathsScreen> {
           : StreamBuilder<List<CrossedPathEvent>>(
               stream: FirestoreService().streamCrossedPaths(widget.currentUser.id),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
+                if (snapshot.hasError) {
+                  return const Center(child: Text("Sürücüler yüklenirken bir hata oluştu.", style: TextStyle(color: Colors.white70)));
+                }
+                if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator(color: NeuColors.accentOrange));
                 }
 

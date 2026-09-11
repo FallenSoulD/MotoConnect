@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 /// MotoConnect Yönetici (Admin) Yapılandırması ve Canlı Yönetimi
 class AdminConfig {
@@ -18,6 +19,8 @@ class AdminConfig {
           _dynamicAdmins.clear();
           _dynamicAdmins.addAll(list.map((e) => e.toString().trim().toLowerCase()));
         }
+      }, onError: (e) {
+        debugPrint("AdminConfig dinleme hatası: $e");
       });
     } catch (_) {}
   }

@@ -70,11 +70,11 @@ class SosSheet {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "Moto SOS Acil Durum",
+                                "MotoConnect Yol Yardımı",
                                 style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17),
                               ),
                               Text(
-                                "Çevrendeki tüm motorculara anında yardım sinyali fırlat.",
+                                "Çevrendeki tüm motorculara anında yardım sinyali fırlat.\n\n⚠️ Gerçek acil durumlarda (kaza vs.) lütfen önce 112'yi arayın.",
                                 style: TextStyle(color: Colors.white54, fontSize: 11.5),
                               ),
                             ],
@@ -280,6 +280,7 @@ class SosSheet {
                           nickname: alert.senderNickname,
                           imageUrls: [if (alert.senderPhoto.isNotEmpty) alert.senderPhoto],
                           bio: 'S.O.S Yardım Talebi',
+                          gender: 'Belirtmek İstemiyorum',
                           ridingStyle: 'Naked',
                           experienceLevel: 'Bilinmiyor',
                           garage: const [],

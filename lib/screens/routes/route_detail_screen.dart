@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../../models/user_model.dart';
 import '../../models/ride_model.dart';
 import '../../services/route_service.dart';
 import '../../services/firestore_service.dart';
 import '../../widgets/neumorphic_widgets.dart';
+
 import 'dart:async';
+
 import 'package:geolocator/geolocator.dart';
-import 'package:url_launcher/url_launcher.dart';
+
 import '../../widgets/navigation_helper.dart';
 
 class RouteDetailScreen extends StatefulWidget {
@@ -31,7 +34,7 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
   late bool _joined;
   late bool _isStarted;
   bool _isLoadingRoute = false;
-  
+
   StreamSubscription<Position>? _positionStream;
   LatLng? _currentLocation;
   bool _isFollowing = false;
@@ -47,10 +50,10 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
     if (_routePoints.length < 3 && _routePoints.length >= 2) {
       _fetchRoadRouteGeometry();
     }
-    
+
     _startLocationTracking();
   }
-  
+
   @override
   void dispose() {
     _positionStream?.cancel();
@@ -60,27 +63,36 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
   Future<void> _startLocationTracking() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) return;
-    
+
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) return;
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return;
+      }
     }
 
-    _positionStream = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 10,
-      ),
-    ).listen((Position pos) {
-      if (!mounted) return;
-      setState(() {
-        _currentLocation = LatLng(pos.latitude, pos.longitude);
-        if (_isFollowing) {
-          _mapController.move(_currentLocation!, _mapController.camera.zoom > 14.0 ? _mapController.camera.zoom : 15.0);
-        }
-      });
-    });
+    _positionStream =
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            distanceFilter: 10,
+          ),
+        ).listen((Position pos) {
+          if (!mounted) return;
+          setState(() {
+            _currentLocation = LatLng(pos.latitude, pos.longitude);
+            if (_isFollowing) {
+              _mapController.move(
+                _currentLocation!,
+                _mapController.camera.zoom > 14.0
+                    ? _mapController.camera.zoom
+                    : 15.0,
+              );
+            }
+          });
+        });
   }
 
   Future<void> _fetchRoadRouteGeometry() async {
@@ -96,8 +108,12 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
     }
   }
 
-  LatLng get _startPoint => _routePoints.isNotEmpty ? _routePoints.first : const LatLng(40.9901, 29.0232);
-  LatLng get _endPoint => _routePoints.isNotEmpty ? _routePoints.last : const LatLng(41.1760, 29.6100);
+  LatLng get _startPoint => _routePoints.isNotEmpty
+      ? _routePoints.first
+      : const LatLng(40.9901, 29.0232);
+  LatLng get _endPoint => _routePoints.isNotEmpty
+      ? _routePoints.last
+      : const LatLng(41.1760, 29.6100);
 
   LatLng get _centerPoint {
     if (_routePoints.isEmpty) return const LatLng(40.9901, 29.0232);
@@ -113,7 +129,8 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
   bool get _canDelete =>
       widget.currentUser.isAdmin ||
       widget.currentUser.id == widget.ride.creatorId ||
-      widget.currentUser.email.trim().toLowerCase() == "cenkaliyedek@gmail.com" ||
+      widget.currentUser.email.trim().toLowerCase() ==
+          "cenkaliyedek@gmail.com" ||
       widget.ride.creatorId.isEmpty;
 
   Future<void> _confirmDeleteRoute() async {
@@ -132,13 +149,24 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                 children: [
                   Icon(Icons.delete_forever, color: Colors.redAccent, size: 26),
                   SizedBox(width: 10),
-                  Text("Rotayı Sil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(
+                    "Rotayı Sil",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 14),
               const Text(
                 "Bu rotayı kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
-                style: TextStyle(color: Colors.white70, fontSize: 13.5, height: 1.4),
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 13.5,
+                  height: 1.4,
+                ),
               ),
               const SizedBox(height: 22),
               Row(
@@ -173,9 +201,19 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
         const SnackBar(
           content: Row(
             children: [
-              SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              ),
               SizedBox(width: 12),
-              Text("Rota kalıcı olarak siliniyor...", style: TextStyle(color: Colors.white)),
+              Text(
+                "Rota kalıcı olarak siliniyor...",
+                style: TextStyle(color: Colors.white),
+              ),
             ],
           ),
           duration: Duration(seconds: 2),
@@ -189,7 +227,10 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
           SnackBar(
             content: Text(
               success ? "🗑️ Rota başarıyla silindi." : "Rota silindi.",
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             backgroundColor: Colors.green[800],
             duration: const Duration(seconds: 3),
@@ -208,7 +249,11 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
         backgroundColor: NeuColors.surfaceDark,
         title: Text(
           widget.ride.title,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
         ),
         actions: [
           if (_canDelete) ...[
@@ -278,9 +323,15 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                       decoration: const BoxDecoration(
                         color: Colors.green,
                         shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: Colors.black54, blurRadius: 6)],
+                        boxShadow: [
+                          BoxShadow(color: Colors.black54, blurRadius: 6),
+                        ],
                       ),
-                      child: const Icon(Icons.flag, color: Colors.white, size: 20),
+                      child: const Icon(
+                        Icons.flag,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
                   ),
                   // Varış Noktası
@@ -293,9 +344,15 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                       decoration: const BoxDecoration(
                         color: NeuColors.accentOrange,
                         shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: Colors.black54, blurRadius: 6)],
+                        boxShadow: [
+                          BoxShadow(color: Colors.black54, blurRadius: 6),
+                        ],
                       ),
-                      child: const Icon(Icons.sports_score, color: Colors.white, size: 22),
+                      child: const Icon(
+                        Icons.sports_score,
+                        color: Colors.white,
+                        size: 22,
+                      ),
                     ),
                   ),
                   if (_currentLocation != null)
@@ -316,7 +373,9 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                               color: Colors.blue,
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.white, width: 3),
-                              boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 4)],
+                              boxShadow: const [
+                                BoxShadow(color: Colors.black45, blurRadius: 4),
+                              ],
                             ),
                           ),
                         ),
@@ -333,14 +392,27 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
               top: 16,
               left: 16,
               child: NeuContainer(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
                 borderRadius: 20,
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: NeuColors.accentAmber)),
+                    SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: NeuColors.accentAmber,
+                      ),
+                    ),
                     SizedBox(width: 8),
-                    Text("Gerçek karayolu rotası çiziliyor...", style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    Text(
+                      "Gerçek karayolu rotası çiziliyor...",
+                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
                   ],
                 ),
               ),
@@ -404,20 +476,39 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildStatBox(Icons.straighten, "${widget.ride.distanceKm.toStringAsFixed(0)} km", "Mesafe"),
-                      _buildStatBox(Icons.timer, widget.ride.estimatedDuration, "Tahmini Süre"),
-                      _buildStatBox(Icons.group, "${widget.ride.participantCount} Motorcu", "Katılımcı"),
+                      _buildStatBox(
+                        Icons.straighten,
+                        "${widget.ride.distanceKm.toStringAsFixed(0)} km",
+                        "Mesafe",
+                      ),
+                      _buildStatBox(
+                        Icons.timer,
+                        widget.ride.estimatedDuration,
+                        "Tahmini Süre",
+                      ),
+                      _buildStatBox(
+                        Icons.group,
+                        "${widget.ride.participantCount} Motorcu",
+                        "Katılımcı",
+                      ),
                     ],
                   ),
                   const Divider(height: 24),
                   Row(
                     children: [
-                      const Icon(Icons.place, color: NeuColors.accentGreen, size: 18),
+                      const Icon(
+                        Icons.place,
+                        color: NeuColors.accentGreen,
+                        size: 18,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           "Buluşma: ${widget.ride.meetingPoint}",
-                          style: const TextStyle(color: Colors.white70, fontSize: 13),
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                     ],
@@ -425,12 +516,19 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Icon(Icons.alt_route, color: NeuColors.accentOrange, size: 18),
+                      const Icon(
+                        Icons.alt_route,
+                        color: NeuColors.accentOrange,
+                        size: 18,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           "Güzergah: ${widget.ride.route}",
-                          style: const TextStyle(color: Colors.white70, fontSize: 13),
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                     ],
@@ -440,25 +538,37 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                     children: [
                       Expanded(
                         child: NeuButton(
-                          text: (_joined && _isStarted) ? "Varış Noktası" : "Buluşma Noktası",
-                          icon: (_joined && _isStarted) ? Icons.rocket_launch : Icons.place,
-                          color: (_joined && _isStarted) ? NeuColors.accentGreen : Colors.blue[800],
+                          text: (_joined && _isStarted)
+                              ? "Varış Noktası"
+                              : "Buluşma Noktası",
+                          icon: (_joined && _isStarted)
+                              ? Icons.rocket_launch
+                              : Icons.place,
+                          color: (_joined && _isStarted)
+                              ? NeuColors.accentGreen
+                              : Colors.blue[800],
                           isPrimary: true,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           onPressed: () {
-                             if (widget.ride.waypoints.isNotEmpty) {
-                                final target = (_joined && _isStarted) ? widget.ride.waypoints.last : widget.ride.waypoints.first;
-                                final title = (_joined && _isStarted) ? "Varış Noktası" : "Buluşma Noktası";
-                                final subtitle = (_joined && _isStarted) ? "Sürüş rotasını başlat (Varış noktasına git)" : "Buluşma noktasına yol tarifi al";
-                                
-                                NavigationHelper.openNavigationSheet(
-                                  context,
-                                  targetLat: target.latitude,
-                                  targetLng: target.longitude,
-                                  title: title,
-                                  subtitle: subtitle,
-                                );
-                             }
+                            if (widget.ride.waypoints.isNotEmpty) {
+                              final target = (_joined && _isStarted)
+                                  ? widget.ride.waypoints.last
+                                  : widget.ride.waypoints.first;
+                              final title = (_joined && _isStarted)
+                                  ? "Varış Noktası"
+                                  : "Buluşma Noktası";
+                              final subtitle = (_joined && _isStarted)
+                                  ? "Sürüş rotasını başlat (Varış noktasına git)"
+                                  : "Buluşma noktasına yol tarifi al";
+
+                              NavigationHelper.openNavigationSheet(
+                                context,
+                                targetLat: target.latitude,
+                                targetLng: target.longitude,
+                                title: title,
+                                subtitle: subtitle,
+                              );
+                            }
                           },
                         ),
                       ),
@@ -466,8 +576,12 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                       Expanded(
                         child: NeuButton(
                           text: _joined ? "Ayrıl" : "Katıl",
-                          icon: _joined ? Icons.exit_to_app : Icons.add_circle_outline,
-                          color: _joined ? Colors.red[900] : NeuColors.accentOrange,
+                          icon: _joined
+                              ? Icons.exit_to_app
+                              : Icons.add_circle_outline,
+                          color: _joined
+                              ? Colors.red[900]
+                              : NeuColors.accentOrange,
                           isPrimary: !_joined,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           onPressed: () async {
@@ -480,8 +594,14 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                             if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(_joined ? "Sürüşe katıldın! 🚀" : "Sürüşten ayrıldın."),
-                                backgroundColor: _joined ? Colors.green : Colors.redAccent,
+                                content: Text(
+                                  _joined
+                                      ? "Sürüşe katıldın! 🚀"
+                                      : "Sürüşten ayrıldın.",
+                                ),
+                                backgroundColor: _joined
+                                    ? Colors.green
+                                    : Colors.redAccent,
                                 duration: const Duration(seconds: 1),
                               ),
                             );
@@ -490,7 +610,8 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                       ),
                     ],
                   ),
-                  if (widget.currentUser.id == widget.ride.creatorId && !_isStarted) ...[
+                  if (widget.currentUser.id == widget.ride.creatorId &&
+                      !_isStarted) ...[
                     const SizedBox(height: 12),
                     SizedBox(
                       width: double.infinity,
@@ -506,7 +627,9 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text("Sürüş başlatıldı! Katılımcılar artık Varış Noktasını görebilir."),
+                              content: Text(
+                                "Sürüş başlatıldı! Katılımcılar artık Varış Noktasını görebilir.",
+                              ),
                               backgroundColor: Colors.green,
                               duration: Duration(seconds: 2),
                             ),
@@ -529,8 +652,18 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
       children: [
         Icon(icon, color: NeuColors.accentOrange, size: 22),
         const SizedBox(height: 4),
-        Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-        Text(label, style: const TextStyle(color: Colors.white38, fontSize: 11)),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
+        ),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white38, fontSize: 11),
+        ),
       ],
     );
   }

@@ -106,8 +106,17 @@ class SafetyCenterScreen extends StatelessWidget {
           const SizedBox(height: 20),
 
           const Text(
-            "ACİL DURUM HATLARI 🆘",
+            "ACİL DURUM & YOL YARDIM 🆘",
             style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1),
+          ),
+          const SizedBox(height: 6),
+          const NeuContainer(
+            padding: EdgeInsets.all(12),
+            borderRadius: 12,
+            child: Text(
+              "Gerçek acil durumlarda (Kaza, Yaralanma vb.) lütfen doğrudan 112'yi arayın.",
+              style: TextStyle(color: Colors.white70, fontSize: 11, height: 1.3),
+            ),
           ),
           const SizedBox(height: 10),
 

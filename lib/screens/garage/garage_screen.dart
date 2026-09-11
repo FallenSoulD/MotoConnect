@@ -971,7 +971,7 @@ class _GarageScreenState extends State<GarageScreen> {
               ),
             ),
 
-            // 3. E-POSTA MAVİ TİK DOĞRULAMA KARTI
+            // 3. TELEFON MAVİ TİK DOĞRULAMA KARTI
             if (!widget.aktifKullanici.isVerified)
               NeuCard(
                 margin: const EdgeInsets.only(bottom: 14),
@@ -985,7 +985,7 @@ class _GarageScreenState extends State<GarageScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "E-Posta Doğrulaması",
+                            "Telefon Doğrulaması",
                             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                           ),
                           Text(

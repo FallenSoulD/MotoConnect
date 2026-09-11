@@ -192,7 +192,10 @@ class _RidesScreenState extends State<RidesScreen> {
             child: StreamBuilder<List<RideEvent>>(
               stream: FirestoreService().streamRides(),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
+                if (snapshot.hasError) {
+                  return const Center(child: Text("Sürüşler yüklenirken bir hata oluştu.", style: TextStyle(color: Colors.white70)));
+                }
+                if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator(color: NeuColors.accentOrange));
                 }
 
@@ -286,27 +289,40 @@ class _RidesScreenState extends State<RidesScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Stack(
-                              children: [
-                                Container(
-                                  height: 155,
-                                  decoration: BoxDecoration(
-                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                                    image: DecorationImage(
-                                      image: NetworkImage(ride.imageUrl),
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  top: 10,
-                                  right: 10,
-                                  child: Container(
+                            Padding(
+                              padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  // BAŞLANGIÇ NOKTASI YAKINLIK ROZETİ
+                                  Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                     decoration: BoxDecoration(
-                                      color: Colors.black87,
+                                      color: NeuColors.accentOrange.withValues(alpha: 0.15),
                                       borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(color: Colors.white24),
+                                      border: Border.all(color: NeuColors.accentOrange.withValues(alpha: 0.3)),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.near_me, color: NeuColors.accentOrange, size: 12),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          distance < 1.0
+                                              ? "${(distance * 1000).toInt()}m yakınınızda"
+                                              : "${distance.toStringAsFixed(1)} km yakınınızda",
+                                          style: const TextStyle(color: NeuColors.accentOrange, fontSize: 11, fontWeight: FontWeight.bold),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  // TEMPO ROZETİ
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: NeuColors.accentAmber.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: NeuColors.accentAmber.withValues(alpha: 0.3)),
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
@@ -315,42 +331,16 @@ class _RidesScreenState extends State<RidesScreen> {
                                         const SizedBox(width: 4),
                                         Text(
                                           ride.tempo,
-                                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                          style: const TextStyle(color: NeuColors.accentAmber, fontSize: 11, fontWeight: FontWeight.bold),
                                         ),
                                       ],
                                     ),
                                   ),
-                                ),
-                                // BAŞLANGIÇ NOKTASI YAKINLIK ROZETİ
-                                Positioned(
-                                  top: 10,
-                                  left: 10,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                    decoration: BoxDecoration(
-                                      color: NeuColors.accentOrange.withValues(alpha: 0.9),
-                                      borderRadius: BorderRadius.circular(10),
-                                      boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 4)],
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(Icons.near_me, color: Colors.white, size: 12),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          distance < 1.0
-                                              ? "${(distance * 1000).toInt()}m yakınınızda"
-                                              : "${distance.toStringAsFixed(1)} km yakınınızda",
-                                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                             Padding(
-                              padding: const EdgeInsets.all(16.0),
+                              padding: const EdgeInsets.fromLTRB(16.0, 10.0, 16.0, 16.0),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [

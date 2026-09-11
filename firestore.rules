@@ -1,130 +1,78 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function to check if user is logged in
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    function isAdmin() {
-      return isAuthenticated() && request.auth.token.email != null && (
-        request.auth.token.email == "cenkaliyedek@gmail.com" ||
-        request.auth.token.email in get(/databases/$(database)/documents/config/admins).data.emails
-      );
-    }
-
-    // 1. KULLANICI PROFİLLERİ (users)
+    // 1. Profil (Users) Koleksiyonu Güvenliği
     match /users/{userId} {
-      // Sadece giriş yapmış kullanıcılar profilleri okuyabilir (Radar vs. için gerekli)
-      allow read: if isAuthenticated();
-      // Yalnızca kendi profilini güncelleyebilir
-      allow create, update: if isAuthenticated() && request.auth.uid == userId;
-      // Kendi profili silebilir, ayrıca Adminler de silebilir
-      allow delete: if (isAuthenticated() && request.auth.uid == userId) || isAdmin();
+      // Herkes diğer profilleri okuyabilir (Swipe ve Radar için gereklidir)
+      allow read: if request.auth != null;
+      // Sadece profilin sahibi (oturum açmış kişi) kendi profilini oluşturabilir, silebilir veya güncelleyebilir.
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // 2. BİREBİR VE GRUP SOHBETLERİ (chats)
-    match /chats/{chatRoomId} {
-      // Sadece chatin katılımcıları okuyabilir/yazabilir
-      allow read: if isAuthenticated() && (request.auth.uid in resource.data.participants);
-      allow create: if isAuthenticated() && (request.auth.uid in request.resource.data.participants);
-      allow update: if isAuthenticated() && (request.auth.uid in resource.data.participants);
-      allow delete: if isAdmin();
-
-      match /messages/{messageId} {
-        // ChatRoomId formatı "uidA_uidB" olduğu için güvenlik kontrolü (performanslı)
-        allow read, create: if isAuthenticated() && chatRoomId.matches('.*' + request.auth.uid + '.*');
-        allow update: if false; 
-        allow delete: if isAdmin();
-      }
-    }
-
-    // 3. SÜRÜŞ ETKİNLİKLERİ VE ROTALAR (rides)
-    match /rides/{rideId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated(); // Katılım (participantIds) için herkes güncelleyebilir
-      allow delete: if (isAuthenticated() && request.auth.uid == resource.data.creatorId) || isAdmin();
-    }
-
-    // 4. CANLI GAZLAMA ODALARI (lobbies)
-    match /lobbies/{lobbyId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      // Sadece lobi kurucusu veya katılanlar güncelleyebilir
-      allow update: if isAuthenticated(); 
-      allow delete: if isAuthenticated() || isAdmin();
-    }
-
-    // 5. SELEKTÖR & SİNYAL BİLDİRİMLERİ (signals)
-    match /signals/{signalId} {
-      allow read: if isAuthenticated() && request.auth.uid == resource.data.toUserId; // Sadece kendisine gelenleri okur
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.fromUserId; // Kendi adına gönderir
-      allow delete: if (isAuthenticated() && request.auth.uid == resource.data.toUserId) || (isAuthenticated() && request.auth.uid == resource.data.senderId) || isAdmin();
-    }
-
-    // 6. SOS ACİL ÇAĞRILARI (sos_alerts)
-    match /sos_alerts/{alertId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.senderId;
-      allow update: if isAuthenticated() && request.auth.uid == resource.data.senderId;
-      allow delete: if (isAuthenticated() && request.auth.uid == resource.data.senderId) || isAdmin();
-    }
-
-    // 7. KULLANICI ŞİKAYETLERİ VE MODERASYON (reports)
-    match /reports/{reportId} {
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.reportedBy;
-      allow read, update, delete: if isAuthenticated() && request.auth.token.email != null && (
-        request.auth.token.email == "cenkaliyedek@gmail.com" ||
-        request.auth.token.email in get(/databases/$(database)/documents/config/admins).data.emails
-      ); 
-    }
-
-    // 8. SİSTEM VE ADMİN YAPILANDIRMASI (config)
-    match /config/{configId} {
-      allow read: if true; // Uygulamanın açılabilmesi için herkese açık (Sadece okuma)
-      allow write: if isAuthenticated() && request.auth.token.email != null && (
-        request.auth.token.email == "cenkaliyedek@gmail.com" ||
-        request.auth.token.email in get(/databases/$(database)/documents/config/admins).data.emails
-      );
-    }
-
-    // 9. DUYURULAR (announcements)
-    match /announcements/{announcementId} {
-      allow read: if isAuthenticated();
-      allow write: if false;
-    }
-    
-    // 10. GÖZ GEÇMİŞİ (crossed_paths)
-    match /crossed_paths/{pathId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated() || isAdmin();
-    }
-    
-    // 11. TELEMETRİ LİDER TABLOSU (telemetry_leaderboard)
-    match /telemetry_leaderboard/{entryId} {
-      allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated();
-      allow delete: if false;
-    }
-
-    // 12. SİSTEM AYARLARI (system_settings)
+    // 2. Sistem Ayarları (System Config) ve Admin Ayarları (Config)
     match /system_settings/{settingId} {
       allow read: if true;
-      allow write: if isAuthenticated() && request.auth.token.email != null && (
-        request.auth.token.email == "cenkaliyedek@gmail.com" ||
+      allow write: if request.auth != null && (
+        request.auth.token.email == 'cenkaliyedek@gmail.com' || 
+        request.auth.token.admin == true ||
+        request.auth.token.email in get(/databases/$(database)/documents/config/admins).data.emails
+      );
+    }
+    
+    match /config/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null && (
+        request.auth.token.email == 'cenkaliyedek@gmail.com' || 
+        request.auth.token.admin == true ||
         request.auth.token.email in get(/databases/$(database)/documents/config/admins).data.emails
       );
     }
 
-    // 13. KAYITLI ROTALAR (saved_routes)
+    // 3. Geçiş Yolları (Crossed Paths) Koleksiyonu Güvenliği
+    match /crossed_paths/{pathId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // 4. Sohbetler (Chats), Sürüşler (Rides), Sinyaller (Signals), Rotalar (Routes) ve Lobiler (Lobbies)
+    match /chats/{chatId} {
+      allow read, write: if request.auth != null;
+    }
+    match /rides/{rideId} {
+      allow read, write: if request.auth != null;
+    }
+    match /signals/{signalId} {
+      allow read, write: if request.auth != null;
+    }
     match /saved_routes/{routeId} {
-      allow read: if isAuthenticated() && request.auth.uid == resource.data.userId;
-      allow create: if isAuthenticated(); // Herkes kendi userId'si ile yaratıyor zaten
-      allow update, delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow read, write: if request.auth != null;
+    }
+    match /live_lobbies/{lobbyId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // 5. Raporlar (Admin Paneli İçin) ve Duyurular
+    match /reports/{reportId} {
+      allow read: if request.auth != null && (
+        request.auth.token.email == 'cenkaliyedek@gmail.com' || 
+        request.auth.token.admin == true ||
+        request.auth.token.email in get(/databases/$(database)/documents/config/admins).data.emails
+      );
+      allow write: if request.auth != null; // Kullanıcılar şikayet oluşturabilir
+    }
+    
+    match /announcements/{announceId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (
+        request.auth.token.email == 'cenkaliyedek@gmail.com' || 
+        request.auth.token.admin == true ||
+        request.auth.token.email in get(/databases/$(database)/documents/config/admins).data.emails
+      );
+    }
+    
+    // 6. Genel Yasaklama
+    // Yukarıda belirtilmeyen hiçbir koleksiyona erişilemez.
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

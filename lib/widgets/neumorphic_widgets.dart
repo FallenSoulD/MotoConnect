@@ -35,8 +35,7 @@ class NeuColors {
 
 enum NeuStyle { raised, sunken, flat }
 
-/// Modern Minimalist Kart / Konteyner Bileşeni
-class NeuContainer extends StatelessWidget {
+class NeuContainer extends StatefulWidget {
   final Widget? child;
   final double? width;
   final double? height;
@@ -73,54 +72,74 @@ class NeuContainer extends StatelessWidget {
   });
 
   @override
+  State<NeuContainer> createState() => _NeuContainerState();
+}
+
+class _NeuContainerState extends State<NeuContainer> {
+  bool _isPressed = false;
+
+  @override
   Widget build(BuildContext context) {
     Color baseColor;
-    if (color != null) {
-      baseColor = color!;
-    } else if (style == NeuStyle.sunken) {
+    if (widget.color != null) {
+      baseColor = widget.color!;
+    } else if (widget.style == NeuStyle.sunken) {
       baseColor = NeuColors.surfaceDark;
     } else {
       baseColor = NeuColors.surface;
     }
 
     List<BoxShadow> shadows = [];
-    if (customShadows != null) {
-      shadows = customShadows!;
-    } else if (style == NeuStyle.raised && depth > 0) {
+    if (widget.customShadows != null) {
+      shadows = widget.customShadows!;
+    } else if (widget.style == NeuStyle.raised && widget.depth > 0) {
       shadows = [
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.28),
-          offset: Offset(0, depth * 0.7),
-          blurRadius: depth * 2.5,
+          color: Colors.black.withValues(alpha: _isPressed ? 0.15 : 0.28),
+          offset: Offset(0, _isPressed ? widget.depth * 0.3 : widget.depth * 0.7),
+          blurRadius: _isPressed ? widget.depth * 1.5 : widget.depth * 2.5,
           spreadRadius: 0,
         ),
       ];
     }
 
-    final effectiveBorderColor = borderColor ??
-        (style == NeuStyle.sunken
+    final effectiveBorderColor = widget.borderColor ??
+        (widget.style == NeuStyle.sunken
             ? Colors.white.withValues(alpha: 0.04)
             : Colors.white.withValues(alpha: 0.07));
 
-    Widget content = AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      width: width,
-      height: height,
-      margin: margin,
-      padding: padding,
-      decoration: BoxDecoration(
-        color: gradient == null ? baseColor : null,
-        gradient: gradient,
-        borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(color: effectiveBorderColor, width: borderWidth),
-        boxShadow: shadows,
+    Widget content = AnimatedScale(
+      scale: _isPressed ? 0.98 : 1.0,
+      duration: const Duration(milliseconds: 100),
+      curve: Curves.easeInOut,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        width: widget.width,
+        height: widget.height,
+        margin: widget.margin,
+        padding: widget.padding,
+        decoration: BoxDecoration(
+          color: widget.gradient == null ? baseColor : null,
+          gradient: widget.gradient,
+          borderRadius: BorderRadius.circular(widget.borderRadius),
+          border: Border.all(color: effectiveBorderColor, width: widget.borderWidth),
+          boxShadow: shadows,
+        ),
+        child: widget.child,
       ),
-      child: child,
     );
 
-    if (onTap != null) {
+    if (widget.onTap != null) {
       return GestureDetector(
-        onTap: onTap,
+        onTapDown: (_) {
+          HapticFeedback.lightImpact();
+          setState(() => _isPressed = true);
+        },
+        onTapUp: (_) {
+          setState(() => _isPressed = false);
+          widget.onTap?.call();
+        },
+        onTapCancel: () => setState(() => _isPressed = false),
         behavior: HitTestBehavior.opaque,
         child: content,
       );

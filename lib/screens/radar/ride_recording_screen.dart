@@ -274,6 +274,8 @@ class _RideRecordingScreenState extends State<RideRecordingScreen> {
                       waypoints: _routePoints,
                       distanceKm: _distanceKm,
                       duration: _duration,
+                      maxLeanAngle: _maxLeanAngle,
+                      maxSpeedKmh: _maxSpeedKmh,
                       createdAt: DateTime.now(),
                     );
                     await FirestoreService().saveRoute(route);

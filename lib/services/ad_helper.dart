@@ -1,16 +1,19 @@
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+
 import '../models/user_model.dart';
 
 class AdHelper {
   static String get bannerAdUnitId {
     if (kIsWeb) return ''; // Web not supported natively by this plugin
+    // TODO: AdMob'dan aldığınız GERÇEK Banner (Afiş) Reklam Kimliklerini buraya girin.
     if (Platform.isAndroid) {
-      return 'ca-app-pub-3940256099942544/6300978111'; // Test Banner
+      return 'ca-app-pub-4793704295217533/7301179551';
     } else if (Platform.isIOS) {
-      return 'ca-app-pub-3940256099942544/2934735716';
+      return 'ca-app-pub-3940256099942544/2934735716'; // TEST ID -> GERÇEĞİYLE DEĞİŞTİR
     }
     return '';
   }
@@ -18,9 +21,9 @@ class AdHelper {
   static String get interstitialAdUnitId {
     if (kIsWeb) return '';
     if (Platform.isAndroid) {
-      return 'ca-app-pub-3940256099942544/1033173712'; // Test Interstitial
+      return 'ca-app-pub-4793704295217533/7066692485';
     } else if (Platform.isIOS) {
-      return 'ca-app-pub-3940256099942544/4411468910';
+      return 'ca-app-pub-3940256099942544/4411468910'; // TEST ID -> GERÇEĞİYLE DEĞİŞTİR
     }
     return '';
   }
@@ -28,7 +31,7 @@ class AdHelper {
   static String get nativeAdUnitId {
     if (kIsWeb) return '';
     if (Platform.isAndroid) {
-      return 'ca-app-pub-3940256099942544/2247696110'; // Test Native Advanced
+      return 'ca-app-pub-4793704295217533/4483444525';
     } else if (Platform.isIOS) {
       return 'ca-app-pub-3940256099942544/3986624511';
     }
@@ -79,7 +82,8 @@ class AdHelper {
       return;
     }
     _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
-      onAdShowedFullScreenContent: (InterstitialAd ad) => debugPrint('ad onAdShowedFullScreenContent.'),
+      onAdShowedFullScreenContent: (InterstitialAd ad) =>
+          debugPrint('ad onAdShowedFullScreenContent.'),
       onAdDismissedFullScreenContent: (InterstitialAd ad) {
         debugPrint('$ad onAdDismissedFullScreenContent.');
         ad.dispose();
@@ -146,7 +150,10 @@ class _MotoBannerAdState extends State<MotoBannerAd> {
 
   @override
   Widget build(BuildContext context) {
-    if (kIsWeb || widget.currentUser.isPremium || _bannerAd == null || !_isLoaded) {
+    if (kIsWeb ||
+        widget.currentUser.isPremium ||
+        _bannerAd == null ||
+        !_isLoaded) {
       return const SizedBox.shrink();
     }
 

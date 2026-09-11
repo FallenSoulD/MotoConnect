@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
 
 enum NotificationType { signal, superSignal, message, ride, lobby, sos }
@@ -96,6 +97,7 @@ class NotificationService {
           id: lastSenderId,
           nickname: senderNickname,
           bio: '',
+          gender: 'Belirtmek İstemiyorum',
           ridingStyle: senderStyle,
           experienceLevel: '1+ Yıl',
           garage: [
@@ -112,7 +114,7 @@ class NotificationService {
           senderUser: senderUser,
         );
       }
-    });
+    }, onError: (e) => debugPrint("Chat listener error: $e"));
 
     // 2. GELEN SELEKTÖR & SÜPER SELEKTÖR SİNYALLERİNİ DİNLE
     _signalSubscription = FirebaseFirestore.instance
@@ -145,6 +147,7 @@ class NotificationService {
           id: fromUserId,
           nickname: fromNickname,
           bio: '',
+          gender: 'Belirtmek İstemiyorum',
           ridingStyle: 'Motosiklet Tutkunu',
           experienceLevel: '',
           garage: [],
@@ -163,7 +166,7 @@ class NotificationService {
           );
         }
       }
-    });
+    }, onError: (e) => debugPrint("Signal listener error: $e"));
 
     // 3. YAKINDAKİ ACİL S.O.S. ALERTLERİNİ DİNLE
     _sosSubscription = FirebaseFirestore.instance
@@ -202,7 +205,7 @@ class NotificationService {
           locationName: locationName,
         );
       }
-    });
+    }, onError: (e) => debugPrint("SOS listener error: $e"));
   }
 
   void stopListening() {

@@ -547,7 +547,8 @@ class FirestoreService {
   }
 
   Stream<List<MotoUser>> streamRadarUsers({required String currentUserId, String? currentUserEmail}) {
-    return _usersRef.snapshots().map((snapshot) {
+    // Sınırlandırma eklendi. Tüm kullanıcıları değil, en fazla 100 kullanıcıyı çeker (Maliyet/Billing önlemi)
+    return _usersRef.limit(100).snapshots().map((snapshot) {
       final Map<String, MotoUser> uniqueUsers = {};
       final String myEmail = (currentUserEmail ?? '').trim().toLowerCase();
 
@@ -754,7 +755,7 @@ class FirestoreService {
   // ================= CANLI GAZLAMA ODALARI =================
 
   Stream<List<LiveRideLobby>> streamLiveLobbies() {
-    return _lobbiesRef.snapshots().map((snapshot) {
+    return _lobbiesRef.limit(50).snapshots().map((snapshot) {
       final lobbies = snapshot.docs.map((doc) => LiveRideLobby.fromFirestore(doc)).toList();
       return lobbies.where((l) => !l.isExpired).toList();
     }).handleError((_) => <LiveRideLobby>[]);
@@ -1120,6 +1121,7 @@ class FirestoreService {
             id: otherUserId,
             nickname: otherData['nickname'] ?? 'Sürücü',
             bio: '',
+            gender: 'Belirtmek İstemiyorum',
             ridingStyle: otherData['style'] ?? 'Motosiklet Tutkunu',
             experienceLevel: '1+ Yıl',
             garage: [

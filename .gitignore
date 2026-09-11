@@ -57,3 +57,5 @@ key.properties.local
 .env
 .env.*
 serviceAccount*.json
+
+revenuecat.json

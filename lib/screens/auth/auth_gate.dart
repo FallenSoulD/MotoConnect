@@ -100,6 +100,7 @@ class AuthGate extends StatelessWidget {
                 nickname: nickname,
                 email: firebaseUser.email ?? "",
                 bio: "Merhaba! MotoConnect'e katıldım. Tekerin düz bassın! 🏍️",
+                gender: "Belirtmek İstemiyorum",
                 ridingStyle: "Şehir İçi ve Manzara",
                 experienceLevel: "1 Yıl",
                 nextGoal: "Yeni rotalar keşfetmek",

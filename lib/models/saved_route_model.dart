@@ -8,6 +8,8 @@ class SavedRoute {
   final List<LatLng> waypoints;
   final double distanceKm;
   final Duration duration;
+  final double maxLeanAngle;
+  final double maxSpeedKmh;
   final DateTime createdAt;
 
   SavedRoute({
@@ -17,6 +19,8 @@ class SavedRoute {
     required this.waypoints,
     required this.distanceKm,
     required this.duration,
+    this.maxLeanAngle = 0.0,
+    this.maxSpeedKmh = 0.0,
     required this.createdAt,
   });
 
@@ -27,6 +31,8 @@ class SavedRoute {
       'waypoints': waypoints.map((p) => {'lat': p.latitude, 'lng': p.longitude}).toList(),
       'distanceKm': distanceKm,
       'durationSeconds': duration.inSeconds,
+      'maxLeanAngle': maxLeanAngle,
+      'maxSpeedKmh': maxSpeedKmh,
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }
@@ -61,6 +67,8 @@ class SavedRoute {
       waypoints: points,
       distanceKm: (map['distanceKm'] as num?)?.toDouble() ?? 0.0,
       duration: Duration(seconds: (map['durationSeconds'] as num?)?.toInt() ?? 0),
+      maxLeanAngle: (map['maxLeanAngle'] as num?)?.toDouble() ?? 0.0,
+      maxSpeedKmh: (map['maxSpeedKmh'] as num?)?.toDouble() ?? 0.0,
       createdAt: createdTime,
     );
   }

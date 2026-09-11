@@ -27,7 +27,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.motoconnect.app"
+        applicationId = "com.fallensould.motoconnect"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

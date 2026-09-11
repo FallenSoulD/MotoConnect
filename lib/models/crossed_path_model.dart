@@ -50,6 +50,7 @@ class CrossedPathEvent {
               id: map['riderId'] ?? '',
               nickname: map['riderNickname'] ?? 'Motorcu',
               bio: '',
+              gender: 'Belirtmek İstemiyorum',
               ridingStyle: 'Naked',
               experienceLevel: '1+ Yıl',
               garage: const [],

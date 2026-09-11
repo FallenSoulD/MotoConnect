@@ -24,7 +24,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _nicknameController = TextEditingController();
+  String _selectedGender = "Belirtmek İstemiyorum";
   bool _isPrivacyAccepted = false;
+  bool _isAgeVerified = false;
 
   @override
   void dispose() {
@@ -44,9 +46,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Google ile Giriş
   Future<void> _handleGoogleAuth() async {
-    if (!_isPrivacyAccepted) {
+    if (!_isPrivacyAccepted || !_isAgeVerified) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Lütfen gizlilik politikası ve kullanım şartlarını onaylayın."), backgroundColor: NeuColors.accentOrange),
+        const SnackBar(content: Text("Lütfen gizlilik sözleşmesini ve yaş sınırını onaylayın."), backgroundColor: NeuColors.accentOrange),
       );
       return;
     }
@@ -86,9 +88,9 @@ class _LoginScreenState extends State<LoginScreen> {
   // Gerçek Apple & Face ID ile Giriş
   // ignore: unused_element
   Future<void> _handleAppleAuth() async {
-    if (!_isPrivacyAccepted) {
+    if (!_isPrivacyAccepted || !_isAgeVerified) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Lütfen gizlilik politikası ve kullanım şartlarını onaylayın."), backgroundColor: NeuColors.accentOrange),
+        const SnackBar(content: Text("Lütfen gizlilik sözleşmesini ve yaş sınırını onaylayın."), backgroundColor: NeuColors.accentOrange),
       );
       return;
     }
@@ -139,9 +141,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // E-Posta / Şifre Giriş veya Kayıt (Android / Fallback)
   Future<void> _handleEmailAuth() async {
-    if (!_isPrivacyAccepted) {
+    if (!_isPrivacyAccepted || !_isAgeVerified) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Lütfen gizlilik politikası ve kullanım şartlarını onaylayın."), backgroundColor: NeuColors.accentOrange),
+        const SnackBar(content: Text("Lütfen gizlilik sözleşmesini ve yaş sınırını onaylayın."), backgroundColor: NeuColors.accentOrange),
       );
       return;
     }
@@ -177,7 +179,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (isLogin) {
         user = await AuthService().signInWithEmail(email, password);
       } else {
-        user = await AuthService().signUpWithEmail(email, password, nickname);
+        user = await AuthService().signUpWithEmail(email, password, nickname, gender: _selectedGender);
       }
 
       if (user != null) {
@@ -308,14 +310,42 @@ class _LoginScreenState extends State<LoginScreen> {
                                 recognizer: TapGestureRecognizer()
                                   ..onTap = () => LegalDocsSheet.show(context, docType: LegalDocType.privacyPolicy),
                               ),
-                              const TextSpan(text: "'nı okudum, anladım, "),
-                              TextSpan(
-                                text: "18 yaşından büyük olduğumu",
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                              ),
-                              const TextSpan(text: " ve tüm şartları kabul ediyorum."),
+                              const TextSpan(text: "'nı okudum, anladım ve tüm şartları kabul ediyorum."),
                             ],
                           ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                // YAŞ ONAYI
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _isAgeVerified ? NeuColors.accentOrange.withValues(alpha: 0.3) : Colors.transparent,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Checkbox(
+                        value: _isAgeVerified,
+                        activeColor: NeuColors.accentOrange,
+                        checkColor: Colors.black,
+                        side: const BorderSide(color: NeuColors.textSecondary, width: 1.5),
+                        onChanged: (val) {
+                          setState(() {
+                            _isAgeVerified = val ?? false;
+                          });
+                        },
+                      ),
+                      const Expanded(
+                        child: Text(
+                          "18 yaşından büyük olduğumu onaylıyorum.",
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                         ),
                       ),
                     ],
@@ -482,6 +512,33 @@ class _LoginScreenState extends State<LoginScreen> {
                           labelText: "Sürücü Lakabı (Nickname)",
                           hintText: "Örn: GhostRider",
                           prefixIcon: Icons.person_outline,
+                        ),
+                        const SizedBox(height: 14),
+                        // Cinsiyet Seçimi
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: NeuColors.surfaceDark,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _selectedGender,
+                              isExpanded: true,
+                              dropdownColor: NeuColors.surfaceDark,
+                              icon: const Icon(Icons.arrow_drop_down, color: Colors.white70),
+                              style: const TextStyle(color: Colors.white, fontSize: 14),
+                              items: const [
+                                DropdownMenuItem(value: "Kadın", child: Text("Kadın")),
+                                DropdownMenuItem(value: "Erkek", child: Text("Erkek")),
+                                DropdownMenuItem(value: "Belirtmek İstemiyorum", child: Text("Belirtmek İstemiyorum")),
+                              ],
+                              onChanged: (val) {
+                                if (val != null) setState(() => _selectedGender = val);
+                              },
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 14),
                       ],

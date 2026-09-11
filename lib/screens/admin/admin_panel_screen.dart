@@ -227,7 +227,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance.collection('reports').snapshots(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (snapshot.hasError) {
+          return const Center(child: Text("Veriler yüklenirken hata oluştu.", style: TextStyle(color: Colors.white70)));
+        }
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
           return const Center(child: CircularProgressIndicator(color: Colors.redAccent));
         }
 
@@ -871,7 +874,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
     return StreamBuilder<SystemConfig>(
       stream: ConfigService().getConfigStream(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        if (snapshot.hasError) return const Center(child: Text("Hata oluştu."));
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) return const Center(child: CircularProgressIndicator());
         final config = snapshot.data!;
         
         final priceController = TextEditingController(text: config.vipMonthlyPrice);
@@ -985,7 +989,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance.collection('users').snapshots(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (snapshot.hasError) {
+          return const Center(child: Text("Raporlar yüklenirken hata oluştu.", style: TextStyle(color: Colors.white70)));
+        }
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
           return const Center(child: CircularProgressIndicator(color: Colors.redAccent));
         }
 

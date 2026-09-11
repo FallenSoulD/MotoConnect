@@ -47,7 +47,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
       body: StreamBuilder<List<Map<String, dynamic>>>(
         stream: FirestoreService().getUserChatsStream(widget.aktifKullanici.id),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (snapshot.hasError) {
+            return const Center(child: Text("Sohbetler yüklenirken bir hata oluştu.", style: TextStyle(color: Colors.white70)));
+          }
+          if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
             return const Center(child: CircularProgressIndicator(color: NeuColors.accentOrange));
           }
 
@@ -117,6 +120,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 id: otherUserId,
                 nickname: otherNickname,
                 bio: '',
+                gender: 'Belirtmek İstemiyorum',
                 ridingStyle: otherStyle,
                 experienceLevel: '',
                 garage: [

@@ -35,7 +35,10 @@ class _SavedRoutesScreenState extends State<SavedRoutesScreen> {
     return StreamBuilder<List<SavedRoute>>(
         stream: _routesStream,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (snapshot.hasError) {
+            return const Center(child: Text("Rotalar yüklenirken bir hata oluştu.", style: TextStyle(color: Colors.white70)));
+          }
+          if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
             return const Center(child: CircularProgressIndicator(color: NeuColors.accentOrange));
           }
 
@@ -127,6 +130,20 @@ class _SavedRoutesScreenState extends State<SavedRoutesScreen> {
                             const Text("Süre", style: TextStyle(color: Colors.white54, fontSize: 12)),
                             const SizedBox(height: 4),
                             Text(_formatDuration(route.duration), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                          ],
+                        ),
+                        Column(
+                          children: [
+                            const Text("Yatış", style: TextStyle(color: Colors.white54, fontSize: 12)),
+                            const SizedBox(height: 4),
+                            Text("${route.maxLeanAngle.toStringAsFixed(0)}°", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                          ],
+                        ),
+                        Column(
+                          children: [
+                            const Text("Hız", style: TextStyle(color: Colors.white54, fontSize: 12)),
+                            const SizedBox(height: 4),
+                            Text("${route.maxSpeedKmh.toStringAsFixed(0)} km/h", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
                           ],
                         ),
                       ],
