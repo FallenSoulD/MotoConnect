@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/neumorphic_widgets.dart';
-import '../../widgets/google_account_picker_sheet.dart';
 import '../garage/legal_docs_sheet.dart';
 import '../main_screen.dart';
 import '../../main.dart';
@@ -52,13 +50,6 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       return;
     }
-    if (kIsWeb) {
-      GoogleAccountPickerSheet.show(
-        context,
-        onAccountSelected: (user) => _anaEkranaGec(user),
-      );
-      return;
-    }
 
     setState(() => _isLoading = true);
     try {
@@ -67,17 +58,21 @@ class _LoginScreenState extends State<LoginScreen> {
         _anaEkranaGec(user);
       } else {
         if (mounted) {
-          GoogleAccountPickerSheet.show(
-            context,
-            onAccountSelected: (u) => _anaEkranaGec(u),
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Google ile giriş iptal edildi veya tamamlanamadı."),
+              backgroundColor: NeuColors.surfaceLight,
+            ),
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        GoogleAccountPickerSheet.show(
-          context,
-          onAccountSelected: (u) => _anaEkranaGec(u),
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Google giriş hatası: $e"),
+            backgroundColor: Colors.red[800],
+          ),
         );
       }
     } finally {
@@ -384,15 +379,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         iconColor: Colors.black,
                         borderRadius: 14,
                         isLoading: _isLoading,
-                        // TODO: Apple Developer hesabı açıldığında _handleAppleAuth fonksiyonunu aktif et
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Apple ile giriş yakında aktif edilecektir."),
-                              backgroundColor: NeuColors.accentOrange,
-                            ),
-                          );
-                        },
+                        onPressed: _isLoading ? null : _handleAppleAuth,
                         child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
