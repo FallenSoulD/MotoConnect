@@ -284,6 +284,12 @@ class _SwipeScreenState extends State<SwipeScreen> {
         VipGarajEkrani.showPaywall(context, currentUser: widget.aktifKullanici);
         return;
       }
+      FirestoreService().sendRadarSignal(
+        fromUserId: widget.aktifKullanici.id,
+        fromNickname: widget.aktifKullanici.nickname,
+        toUser: degerlendirilenKullanici,
+      );
+
       FirestoreService().updateLikes(
         widget.aktifKullanici.id,
         swipeLikes: widget.aktifKullanici.swipeLikesLeft,
