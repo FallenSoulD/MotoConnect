@@ -13,7 +13,7 @@ class AdHelper {
     if (Platform.isAndroid) {
       return 'ca-app-pub-4793704295217533/7301179551';
     } else if (Platform.isIOS) {
-      return 'ca-app-pub-3940256099942544/2934735716'; // TEST ID -> GERÇEĞİYLE DEĞİŞTİR
+      return 'ca-app-pub-4793704295217533/5306383677'; // TEST ID -> GERÇEĞİYLE DEĞİŞTİR
     }
     return '';
   }
@@ -23,7 +23,7 @@ class AdHelper {
     if (Platform.isAndroid) {
       return 'ca-app-pub-4793704295217533/7066692485';
     } else if (Platform.isIOS) {
-      return 'ca-app-pub-3940256099942544/4411468910'; // TEST ID -> GERÇEĞİYLE DEĞİŞTİR
+      return 'ca-app-pub-4793704295217533/5528523762'; // iOS Gecis Reklami (Interstitial)
     }
     return '';
   }
@@ -33,7 +33,7 @@ class AdHelper {
     if (Platform.isAndroid) {
       return 'ca-app-pub-4793704295217533/4483444525';
     } else if (Platform.isIOS) {
-      return 'ca-app-pub-3940256099942544/3986624511';
+      return 'ca-app-pub-4793704295217533/9263396826'; // İosyerel (Native Advanced)
     }
     return '';
   }

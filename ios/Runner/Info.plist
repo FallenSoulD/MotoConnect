@@ -75,7 +75,7 @@
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>Garajınıza motosiklet ve profil fotoğrafları eklemek için galerinize erişim gerekir.</string>
 		<key>GADApplicationIdentifier</key>
-		<string>ca-app-pub-3940256099942544~1458002511</string>
+		<string>ca-app-pub-4793704295217533~4104982641</string>
 		<key>UIStatusBarHidden</key>
 		<false/>
 		<key>FirebaseAppDelegateProxyEnabled</key>

@@ -105,12 +105,46 @@ class _SavedRoutesScreenState extends State<SavedRoutesScreen> {
                                 route.routeName,
                                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                               ),
+                              const SizedBox(height: 4),
+                              if (route.waypoints.isNotEmpty)
+                                Text(
+                                  "Başlangıç: ${route.waypoints.first.latitude.toStringAsFixed(4)}, ${route.waypoints.first.longitude.toStringAsFixed(4)}\n"
+                                  "Varış: ${route.waypoints.last.latitude.toStringAsFixed(4)}, ${route.waypoints.last.longitude.toStringAsFixed(4)}",
+                                  style: const TextStyle(color: Colors.white70, fontSize: 11),
+                                ),
+                              const SizedBox(height: 4),
                               Text(
                                 "${route.createdAt.day}/${route.createdAt.month}/${route.createdAt.year}",
                                 style: const TextStyle(color: Colors.white54, fontSize: 12),
                               ),
                             ],
                           ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                backgroundColor: NeuColors.background,
+                                title: const Text("Rotayı Sil", style: TextStyle(color: Colors.white)),
+                                content: const Text("Bu rotayı silmek istediğine emin misin?", style: TextStyle(color: Colors.white70)),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text("İptal", style: TextStyle(color: Colors.white54)),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      FirestoreService().deleteSavedRoute(route.id);
+                                    },
+                                    child: const Text("Sil", style: TextStyle(color: Colors.redAccent)),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),

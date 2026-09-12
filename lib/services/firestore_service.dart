@@ -1304,5 +1304,13 @@ class FirestoreService {
       return <SavedRoute>[];
     });
   }
+
+  Future<void> deleteSavedRoute(String routeId) async {
+    try {
+      await _savedRoutesRef.doc(routeId).delete();
+    } catch (e) {
+      debugPrint("deleteSavedRoute error: $e");
+    }
+  }
 }
 

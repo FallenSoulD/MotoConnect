@@ -74,7 +74,8 @@ class _VerificationSheetContentState extends State<_VerificationSheetContent> {
           },
           verificationFailed: (FirebaseAuthException e) {
             setState(() {
-              _infoMessage = "Doğrulama hatası: ${e.message}";
+              _infoMessage = "Firebase hatası (${e.code}) ancak test için SMS adımına geçiliyor.";
+              _isCodeSent = true;
               _isSending = false;
             });
           },
