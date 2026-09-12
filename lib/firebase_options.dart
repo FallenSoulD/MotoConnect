@@ -64,7 +64,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '331540286697',
     projectId: 'motoconnect-c3412',
     storageBucket: 'motoconnect-c3412.firebasestorage.app',
-    iosBundleId: 'com.motoconnect.app',
+    iosBundleId: 'com.fallensould.motoconnect',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -73,7 +73,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '331540286697',
     projectId: 'motoconnect-c3412',
     storageBucket: 'motoconnect-c3412.firebasestorage.app',
-    iosBundleId: 'com.motoconnect.app',
+    iosBundleId: 'com.fallensould.motoconnect',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
