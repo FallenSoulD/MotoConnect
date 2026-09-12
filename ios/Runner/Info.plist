@@ -79,7 +79,7 @@
 		<key>UIStatusBarHidden</key>
 		<false/>
 		<key>FirebaseAppDelegateProxyEnabled</key>
-		<false/>
+		<true/>
 		<key>CFBundleURLTypes</key>
 		<array>
 			<dict>
