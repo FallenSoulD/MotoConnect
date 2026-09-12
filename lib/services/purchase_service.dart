@@ -41,7 +41,7 @@ class PurchaseService {
   // Tanımlı Aylık VIP Abonelik Planı
   static const List<ProductPackage> subscriptions = [
     ProductPackage(
-      id: "vip_monthly_v1",
+      id: "vip_monthly_v2",
       title: "VIP Garaj - 1 Aylık",
       description: "Sınırsız radar menzili, sınırsız swipe, süper selektörler ve altın taç rozeti.",
       priceString: "₺149,99 / ay",
@@ -50,7 +50,7 @@ class PurchaseService {
       discountTag: "EN POPÜLER",
     ),
     ProductPackage(
-      id: "vip_yearly_v1",
+      id: "vip_yearly_v2",
       title: "VIP Garaj - 1 Yıllık",
       description: "12 ay boyunca kesintisiz VIP ayrıcalıkları ve özel kask rozeti.",
       priceString: "₺999,99 / yıl",
