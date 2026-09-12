@@ -644,6 +644,55 @@ class FirestoreService {
     }
   }
 
+  Future<bool> checkMutualSignal(String currentUserId, String targetUserId) async {
+    try {
+      final snap = await _signalsRef
+          .where('fromUserId', isEqualTo: targetUserId)
+          .where('toUserId', isEqualTo: currentUserId)
+          .limit(1)
+          .get();
+      return snap.docs.isNotEmpty;
+    } catch (e) {
+      debugPrint("checkMutualSignal error: $e");
+      return false;
+    }
+  }
+
+  Future<void> createEmptyChat({
+    required MotoUser currentUser,
+    required MotoUser matchedUser,
+  }) async {
+    try {
+      final chatRoomId = getChatRoomId(currentUser.id, matchedUser.id);
+      final doc = await _chatsRef.doc(chatRoomId).get();
+      if (!doc.exists) {
+        await _chatsRef.doc(chatRoomId).set({
+          'participants': [currentUser.id, matchedUser.id],
+          'lastMessage': 'Yeni eşleşme',
+          'lastSenderId': '',
+          'lastSenderNickname': '',
+          'lastMessageTime': FieldValue.serverTimestamp(),
+          'participantData': {
+            currentUser.id: {
+              'nickname': currentUser.nickname,
+              'photo': currentUser.imageUrls.isNotEmpty ? currentUser.imageUrls[0] : '',
+              'motor': currentUser.primaryMotor,
+              'style': currentUser.ridingStyle,
+            },
+            matchedUser.id: {
+              'nickname': matchedUser.nickname,
+              'photo': matchedUser.imageUrls.isNotEmpty ? matchedUser.imageUrls[0] : '',
+              'motor': matchedUser.primaryMotor,
+              'style': matchedUser.ridingStyle,
+            },
+          },
+        }, SetOptions(merge: true));
+      }
+    } catch (e) {
+      debugPrint("createEmptyChat error: $e");
+    }
+  }
+
   Stream<List<Map<String, dynamic>>> streamIncomingSignals(String userId) {
     return _signalsRef
         .where('toUserId', isEqualTo: userId)

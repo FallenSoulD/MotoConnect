@@ -278,7 +278,8 @@ class _SwipeScreenState extends State<SwipeScreen> {
         superLikes: widget.aktifKullanici.superLikesLeft,
         lastLimitsResetAt: widget.aktifKullanici.lastLimitsResetAt,
       );
-      _eslesmeEkraniGoster(degerlendirilenKullanici, isSuperMatch: true);
+      
+      _checkMatchAsync(degerlendirilenKullanici, isSuperMatch: true);
     } else if (begenildiMi) {
       if (!widget.aktifKullanici.useSwipeLike()) {
         VipGarajEkrani.showPaywall(context, currentUser: widget.aktifKullanici);
@@ -296,19 +297,7 @@ class _SwipeScreenState extends State<SwipeScreen> {
         lastLimitsResetAt: widget.aktifKullanici.lastLimitsResetAt,
       );
 
-      final bool karsilikliBegeniVarMi = degerlendirilenKullanici.id == "rider_asfalt";
-
-      if (karsilikliBegeniVarMi) {
-        _eslesmeEkraniGoster(degerlendirilenKullanici);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("${degerlendirilenKullanici.nickname}'e selektör çakıldı! Karşılık verirse eşleşeceksiniz ⚡"),
-            backgroundColor: const Color(0xFF2C1A0E),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
+      _checkMatchAsync(degerlendirilenKullanici, isSuperMatch: false);
     } else {
       // REDDETTİ (Pas Geçti)
       widget.aktifKullanici.passUser(degerlendirilenKullanici.id);
@@ -325,6 +314,31 @@ class _SwipeScreenState extends State<SwipeScreen> {
         _profileScrollController.jumpTo(0);
       }
     });
+  }
+
+  Future<void> _checkMatchAsync(MotoUser degerlendirilenKullanici, {required bool isSuperMatch}) async {
+    final bool karsilikliBegeniVarMi = await FirestoreService().checkMutualSignal(
+      widget.aktifKullanici.id,
+      degerlendirilenKullanici.id,
+    );
+
+    if (!mounted) return;
+
+    if (karsilikliBegeniVarMi || isSuperMatch) {
+      await FirestoreService().createEmptyChat(
+        currentUser: widget.aktifKullanici,
+        matchedUser: degerlendirilenKullanici,
+      );
+      _eslesmeEkraniGoster(degerlendirilenKullanici, isSuperMatch: isSuperMatch);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("${degerlendirilenKullanici.nickname}'e selektör çakıldı! Karşılık verirse eşleşeceksiniz ⚡"),
+          backgroundColor: const Color(0xFF2C1A0E),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   ImageProvider _getImageProvider(String path) {
