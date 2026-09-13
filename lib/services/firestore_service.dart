@@ -613,12 +613,18 @@ class FirestoreService {
     required MotoUser toUser,
   }) async {
     try {
-      await _signalsRef.add({
+      final docId = "${fromUserId}_${toUser.id}";
+      await _signalsRef.doc(docId).set({
         'fromUserId': fromUserId,
         'fromNickname': fromNickname,
         'toUserId': toUser.id,
         'toNickname': toUser.nickname,
         'timestamp': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      await _usersRef.doc(fromUserId).update({
+        'likedUserIds': FieldValue.arrayUnion([toUser.id]),
+        'updatedAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
       debugPrint("sendRadarSignal error: $e");
@@ -631,13 +637,19 @@ class FirestoreService {
     required MotoUser toUser,
   }) async {
     try {
-      await _signalsRef.add({
+      final docId = "${fromUserId}_${toUser.id}";
+      await _signalsRef.doc(docId).set({
         'fromUserId': fromUserId,
         'fromNickname': fromNickname,
         'toUserId': toUser.id,
         'toNickname': toUser.nickname,
         'isSuperSignal': true,
         'timestamp': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      await _usersRef.doc(fromUserId).update({
+        'likedUserIds': FieldValue.arrayUnion([toUser.id]),
+        'updatedAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
       debugPrint("sendSuperSignal error: $e");

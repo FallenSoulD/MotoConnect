@@ -66,6 +66,7 @@ class _SwipeScreenState extends State<SwipeScreen> {
         if (myEmail.isNotEmpty && rider.email.trim().toLowerCase() == myEmail) return;
         if (widget.aktifKullanici.isUserBlocked(rider.id)) return;
         if (widget.aktifKullanici.isUserPassed(rider.id)) return;
+        if (widget.aktifKullanici.isUserLiked(rider.id)) return;
         if (FirestoreService.isTestUser(rider.id, rider.nickname, rider.email)) return;
         uniqueRiders[rider.id] = rider;
       }
@@ -106,22 +107,24 @@ class _SwipeScreenState extends State<SwipeScreen> {
 
     // Ortak özellikleri (tarz, motor tipi veya HOBİLERİ) olanları puanlayıp en üste al
     karsilasilacakProfiller.sort((a, b) {
-      final myStyle = widget.aktifKullanici.ridingStyle.toLowerCase();
-      final myMotor = widget.aktifKullanici.primaryMotorType.toLowerCase();
-      final myHobbies = widget.aktifKullanici.hobbies.map((e) => e.toLowerCase()).toList();
+      final myStyle = widget.aktifKullanici.ridingStyle.trim().toLowerCase();
+      final myMotor = widget.aktifKullanici.primaryMotorType.trim().toLowerCase();
+      final myHobbies = widget.aktifKullanici.hobbies.map((e) => e.trim().toLowerCase()).toList();
 
       int aScore = 0;
       int bScore = 0;
 
-      if (a.ridingStyle.toLowerCase() == myStyle && myStyle.isNotEmpty) aScore += 2;
-      if (a.primaryMotorType.toLowerCase() == myMotor && myMotor.isNotEmpty) aScore += 2;
-      aScore += a.hobbies.where((h) => myHobbies.contains(h.toLowerCase())).length;
+      if (a.ridingStyle.trim().toLowerCase() == myStyle && myStyle.isNotEmpty) aScore += 2;
+      if (a.primaryMotorType.trim().toLowerCase() == myMotor && myMotor.isNotEmpty) aScore += 2;
+      aScore += a.hobbies.where((h) => myHobbies.contains(h.trim().toLowerCase())).length;
 
-      if (b.ridingStyle.toLowerCase() == myStyle && myStyle.isNotEmpty) bScore += 2;
-      if (b.primaryMotorType.toLowerCase() == myMotor && myMotor.isNotEmpty) bScore += 2;
-      bScore += b.hobbies.where((h) => myHobbies.contains(h.toLowerCase())).length;
+      if (b.ridingStyle.trim().toLowerCase() == myStyle && myStyle.isNotEmpty) bScore += 2;
+      if (b.primaryMotorType.trim().toLowerCase() == myMotor && myMotor.isNotEmpty) bScore += 2;
+      bScore += b.hobbies.where((h) => myHobbies.contains(h.trim().toLowerCase())).length;
 
-      return bScore.compareTo(aScore); // Yüksek skor en üstte
+      final compare = bScore.compareTo(aScore); // Yüksek skor en üstte
+      if (compare != 0) return compare;
+      return a.id.compareTo(b.id);
     });
   }
 
@@ -268,6 +271,7 @@ class _SwipeScreenState extends State<SwipeScreen> {
         VipGarajEkrani.showPaywall(context, currentUser: widget.aktifKullanici);
         return;
       }
+      widget.aktifKullanici.likeUser(degerlendirilenKullanici.id);
       FirestoreService().sendSuperSignal(
         fromUserId: widget.aktifKullanici.id,
         fromNickname: widget.aktifKullanici.nickname,
@@ -285,6 +289,7 @@ class _SwipeScreenState extends State<SwipeScreen> {
         VipGarajEkrani.showPaywall(context, currentUser: widget.aktifKullanici);
         return;
       }
+      widget.aktifKullanici.likeUser(degerlendirilenKullanici.id);
       FirestoreService().sendRadarSignal(
         fromUserId: widget.aktifKullanici.id,
         fromNickname: widget.aktifKullanici.nickname,

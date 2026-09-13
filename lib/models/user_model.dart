@@ -70,6 +70,7 @@ class MotoUser {
   DateTime? boostExpiresAt;
   List<String> blockedUserIds;
   List<String> passedUserIds;
+  List<String> likedUserIds;
   bool isBanned;
   int warnings;
   double maxLeanAngleLeft;
@@ -112,6 +113,7 @@ class MotoUser {
     this.boostExpiresAt,
     List<String>? blockedUserIds,
     List<String>? passedUserIds,
+    List<String>? likedUserIds,
     this.isBanned = false,
     this.warnings = 0,
     this.maxLeanAngleLeft = 0.0,
@@ -122,7 +124,8 @@ class MotoUser {
   })  : imageUrls = imageUrls ?? [],
         hobbies = hobbies ?? ["☕ Gece Kahvesi", "🎧 Intercom Muhabbeti", "🛠️ Kendim Bakım Yaparım"],
         blockedUserIds = blockedUserIds ?? [],
-        passedUserIds = passedUserIds ?? [];
+        passedUserIds = passedUserIds ?? [],
+        likedUserIds = likedUserIds ?? [];
 
   double get maxLeanAngle => maxLeanAngleLeft > maxLeanAngleRight ? maxLeanAngleLeft : maxLeanAngleRight;
 
@@ -197,6 +200,7 @@ class MotoUser {
 
   bool isUserBlocked(String userId) => blockedUserIds.contains(userId);
   bool isUserPassed(String userId) => passedUserIds.contains(userId);
+  bool isUserLiked(String userId) => likedUserIds.contains(userId);
 
   void blockUser(String userId) {
     if (!blockedUserIds.contains(userId)) {
@@ -207,6 +211,12 @@ class MotoUser {
   void passUser(String userId) {
     if (!passedUserIds.contains(userId)) {
       passedUserIds.add(userId);
+    }
+  }
+
+  void likeUser(String userId) {
+    if (!likedUserIds.contains(userId)) {
+      likedUserIds.add(userId);
     }
   }
 
@@ -248,6 +258,7 @@ class MotoUser {
       'boostExpiresAt': boostExpiresAt != null ? Timestamp.fromDate(boostExpiresAt!) : null,
       'blockedUserIds': blockedUserIds,
       'passedUserIds': passedUserIds,
+      'likedUserIds': likedUserIds,
       'isBanned': isBanned,
       'warnings': warnings,
       'maxLeanAngleLeft': maxLeanAngleLeft,
@@ -333,6 +344,7 @@ class MotoUser {
       boostExpiresAt: boostTime,
       blockedUserIds: List<String>.from(map['blockedUserIds'] ?? []),
       passedUserIds: List<String>.from(map['passedUserIds'] ?? []),
+      likedUserIds: List<String>.from(map['likedUserIds'] ?? []),
       isBanned: map['isBanned'] ?? false,
       warnings: (map['warnings'] as num?)?.toInt() ?? 0,
       maxLeanAngleLeft: (map['maxLeanAngleLeft'] as num?)?.toDouble() ?? 0.0,

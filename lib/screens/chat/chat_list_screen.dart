@@ -114,7 +114,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
               // GÖNDEREN KİM KONTROLÜ
               final bool isFromMe = lastSenderId.isNotEmpty && lastSenderId == widget.aktifKullanici.id;
               final bool isFromOther = lastSenderId.isNotEmpty && lastSenderId != widget.aktifKullanici.id;
-              final bool isNewChat = lastMessage.isEmpty || lastMessage == 'Yeni sohbet';
+              final bool isNewChat = lastMessage.isEmpty || lastMessage == 'Yeni eşleşme';
 
               final otherUser = MotoUser(
                 id: otherUserId,
