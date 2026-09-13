@@ -343,6 +343,9 @@ class _SwipeScreenState extends State<SwipeScreen> {
     if (!mounted) return;
 
     if (karsilikliBegeniVarMi || isSuperMatch) {
+      // Eşleşme olduğu için karşılıklı sinyalleri (beğenileri) veritabanından temizleyelim
+      await FirestoreService().deleteSignal(widget.aktifKullanici.id, degerlendirilenKullanici.id);
+
       await FirestoreService().createEmptyChat(
         currentUser: widget.aktifKullanici,
         matchedUser: degerlendirilenKullanici,

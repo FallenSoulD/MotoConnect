@@ -92,6 +92,9 @@ class _LikesYouScreenState extends State<LikesYouScreen> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: () {
+                    // Sinyali silerek listeden (Sana Selektör Atanlar) kalkmasını sağla
+                    FirestoreService().deleteSignal(matchedRider.id, widget.currentUser.id);
+
                     Navigator.pop(ctx);
                     Navigator.push(
                       context,

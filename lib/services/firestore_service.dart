@@ -1287,6 +1287,18 @@ class FirestoreService {
     }
   }
 
+  Future<void> deleteSignal(String fromUserId, String toUserId) async {
+    try {
+      final String docId = "${fromUserId}_$toUserId";
+      await _signalsRef.doc(docId).delete();
+      // Ayrıca olası ters sinyali de siliyoruz ki tamamen temizlensin
+      final String reverseDocId = "${toUserId}_$fromUserId";
+      await _signalsRef.doc(reverseDocId).delete();
+    } catch (e) {
+      debugPrint("deleteSignal error: $e");
+    }
+  }
+
   // ================= TELEMETRİ & YATIŞ AÇISI LİDERLİK TABLOSU =================
 
   Future<void> saveTelemetryRecord(TelemetryRecord record) async {
