@@ -131,9 +131,9 @@ class _RadarScreenState extends State<RadarScreen> {
       _mapController.move(_benimKonumum, 14.5);
     }
 
-    // 4 saniyede bir Firestore'a anlık koordinat, hız ve yön senkronize et
+    // 30 saniyede bir Firestore'a anlık koordinat, hız ve yön senkronize et
     final now = DateTime.now();
-    if (_lastGpsSyncTime == null || now.difference(_lastGpsSyncTime!).inSeconds >= 4) {
+    if (_lastGpsSyncTime == null || now.difference(_lastGpsSyncTime!).inSeconds >= 30) {
       _lastGpsSyncTime = now;
       FirestoreService().updateUserLocation(
         widget.aktifKullanici.id,

@@ -366,10 +366,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      const Text(
-                        "Apple veya Google hesabınızla saniyeler içinde başlayın.",
+                      Text(
+                        (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS)
+                            ? "Apple hesabınızla saniyeler içinde başlayın."
+                            : "Google hesabınızla saniyeler içinde başlayın.",
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: NeuColors.textSecondary, fontSize: 12),
+                        style: const TextStyle(color: NeuColors.textSecondary, fontSize: 12),
                       ),
                       const SizedBox(height: 18),
 

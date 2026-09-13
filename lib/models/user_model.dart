@@ -97,9 +97,9 @@ class MotoUser {
     this.radarLikesLeft = 10,
     this.superLikesLeft = 10,
     this.lastLimitsResetAt,
-    this.latitude = 40.986,
-    this.longitude = 29.026,
-    this.locationName = "Kadıköy",
+    this.latitude,
+    this.longitude,
+    this.locationName = "Bilinmiyor",
     this.isOnline = true,
     this.isVerified = false,
     this.lastActiveAt,
@@ -126,7 +126,7 @@ class MotoUser {
 
   double get maxLeanAngle => maxLeanAngleLeft > maxLeanAngleRight ? maxLeanAngleLeft : maxLeanAngleRight;
 
-  LatLng get latLng => LatLng(latitude ?? 40.986, longitude ?? 29.026);
+  LatLng get latLng => LatLng(latitude ?? 0.0, longitude ?? 0.0);
   String get primaryMotor => garage.isNotEmpty ? "${garage[0].brand} ${garage[0].model}" : "Motosiklet Yok";
   String get primaryMotorType => garage.isNotEmpty ? garage[0].type : "Naked";
   bool get isAdmin => AdminConfig.isAdmin(email);
@@ -318,8 +318,8 @@ class MotoUser {
       radarLikesLeft: (map['radarLikesLeft'] as num?)?.toInt() ?? 10,
       superLikesLeft: (map['superLikesLeft'] as num?)?.toInt() ?? 10,
       lastLimitsResetAt: limitsResetTime,
-      latitude: (map['latitude'] as num?)?.toDouble() ?? 40.986,
-      longitude: (map['longitude'] as num?)?.toDouble() ?? 29.026,
+      latitude: (map['latitude'] as num?)?.toDouble(),
+      longitude: (map['longitude'] as num?)?.toDouble(),
       locationName: map['locationName'] ?? 'Bilinmiyor',
       isOnline: map['isOnline'] ?? false,
       isVerified: map['isVerified'] ?? false,
