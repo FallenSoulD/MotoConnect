@@ -213,11 +213,15 @@ class _LikesYouScreenState extends State<LikesYouScreen> {
 
             var signals = snapshot.data ?? [];
             
-            // Filtreleme: Yalnızca engellenenleri gizle
-            signals = signals.where((signal) {
+            // Filtreleme ve tekilleştirme: Engellenenleri gizle, aynı kişiden gelenleri tekilleştir
+            final Map<String, Map<String, dynamic>> uniqueSignals = {};
+            for (var signal in signals) {
               final senderId = signal['fromUserId'] ?? '';
-              return !widget.currentUser.isUserBlocked(senderId);
-            }).toList();
+              if (senderId.isNotEmpty && !widget.currentUser.isUserBlocked(senderId)) {
+                uniqueSignals[senderId] = signal;
+              }
+            }
+            signals = uniqueSignals.values.toList();
 
             if (signals.isEmpty) {
               return Center(

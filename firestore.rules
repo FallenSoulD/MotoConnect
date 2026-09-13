@@ -36,6 +36,9 @@ service cloud.firestore {
     // 4. Sohbetler (Chats), Sürüşler (Rides), Sinyaller (Signals), Rotalar (Routes) ve Lobiler (Lobbies)
     match /chats/{chatId} {
       allow read, write: if request.auth != null;
+      match /messages/{messageId} {
+        allow read, write: if request.auth != null;
+      }
     }
     match /rides/{rideId} {
       allow read, write: if request.auth != null;

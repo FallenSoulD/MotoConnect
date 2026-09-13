@@ -68,7 +68,20 @@ class _SwipeScreenState extends State<SwipeScreen> {
         if (widget.aktifKullanici.isUserPassed(rider.id)) return;
         if (widget.aktifKullanici.isUserLiked(rider.id)) return;
         if (FirestoreService.isTestUser(rider.id, rider.nickname, rider.email)) return;
-        uniqueRiders[rider.id] = rider;
+        
+        // Tekilleştirme: Aynı kişiye ait olası farklı test hesaplarını gizlemek için nickname'i de kontrol et
+        final nicknameKey = rider.nickname.trim().toLowerCase();
+        bool alreadyExists = false;
+        for (final existingRider in uniqueRiders.values) {
+          if (existingRider.nickname.trim().toLowerCase() == nicknameKey) {
+            alreadyExists = true;
+            break;
+          }
+        }
+        
+        if (!alreadyExists) {
+          uniqueRiders[rider.id] = rider;
+        }
       }
 
       for (final event in crossedEvents) {
@@ -114,12 +127,12 @@ class _SwipeScreenState extends State<SwipeScreen> {
       int aScore = 0;
       int bScore = 0;
 
-      if (a.ridingStyle.trim().toLowerCase() == myStyle && myStyle.isNotEmpty) aScore += 2;
-      if (a.primaryMotorType.trim().toLowerCase() == myMotor && myMotor.isNotEmpty) aScore += 2;
+      if (a.ridingStyle.trim().toLowerCase().contains(myStyle) && myStyle.isNotEmpty) aScore += 2;
+      if (a.primaryMotorType.trim().toLowerCase().contains(myMotor) && myMotor.isNotEmpty) aScore += 2;
       aScore += a.hobbies.where((h) => myHobbies.contains(h.trim().toLowerCase())).length;
 
-      if (b.ridingStyle.trim().toLowerCase() == myStyle && myStyle.isNotEmpty) bScore += 2;
-      if (b.primaryMotorType.trim().toLowerCase() == myMotor && myMotor.isNotEmpty) bScore += 2;
+      if (b.ridingStyle.trim().toLowerCase().contains(myStyle) && myStyle.isNotEmpty) bScore += 2;
+      if (b.primaryMotorType.trim().toLowerCase().contains(myMotor) && myMotor.isNotEmpty) bScore += 2;
       bScore += b.hobbies.where((h) => myHobbies.contains(h.trim().toLowerCase())).length;
 
       final compare = bScore.compareTo(aScore); // Yüksek skor en üstte
