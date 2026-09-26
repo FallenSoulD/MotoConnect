@@ -28,9 +28,7 @@ workflows:
         script: |
           flutter build ipa \
             --release \
-            --export-options-plist=/Users/builder/export_options.plist \
-            -- \
-            CODE_SIGN_STYLE=Manual
+            --export-options-plist=/Users/builder/export_options.plist
 
     artifacts:
       - build/ios/ipa/*.ipa
