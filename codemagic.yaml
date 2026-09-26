@@ -9,8 +9,6 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
-      groups:
-        - certificate_credentials
     scripts:
       - name: Install Flutter dependencies
         script: |
@@ -23,10 +21,6 @@ workflows:
             --platform IOS \
             --create
           keychain initialize
-          app-store-connect certificates list \
-            --type IOS_DISTRIBUTION \
-            --certificate-key=@env:CERTIFICATE_KEY \
-            --save
           keychain add-certificates
           xcode-project use-profiles
 
