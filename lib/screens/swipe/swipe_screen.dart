@@ -275,7 +275,7 @@ class _SwipeScreenState extends State<SwipeScreen> {
     });
   }
 
-  void _profilDegerlendir(bool begenildiMi, {bool isSuperLike = false}) {
+  void _profilDegerlendir(bool begenildiMi, {bool isSuperLike = false}) async {
     if (karsilasilacakProfiller.isEmpty) return;
     final degerlendirilenKullanici = karsilasilacakProfiller[0];
 
@@ -285,9 +285,8 @@ class _SwipeScreenState extends State<SwipeScreen> {
         return;
       }
       widget.aktifKullanici.likeUser(degerlendirilenKullanici.id);
-      FirestoreService().sendSuperSignal(
-        fromUserId: widget.aktifKullanici.id,
-        fromNickname: widget.aktifKullanici.nickname,
+      bool isMatch = await FirestoreService().sendSuperSignal(
+        currentUser: widget.aktifKullanici,
         toUser: degerlendirilenKullanici,
       );
       FirestoreService().updateLikes(
@@ -296,16 +295,15 @@ class _SwipeScreenState extends State<SwipeScreen> {
         lastLimitsResetAt: widget.aktifKullanici.lastLimitsResetAt,
       );
       
-      _checkMatchAsync(degerlendirilenKullanici, isSuperMatch: true);
+      _handleMatchResult(degerlendirilenKullanici, isMatch: isMatch, isSuperMatch: true);
     } else if (begenildiMi) {
       if (!widget.aktifKullanici.useSwipeLike()) {
         VipGarajEkrani.showPaywall(context, currentUser: widget.aktifKullanici);
         return;
       }
       widget.aktifKullanici.likeUser(degerlendirilenKullanici.id);
-      FirestoreService().sendRadarSignal(
-        fromUserId: widget.aktifKullanici.id,
-        fromNickname: widget.aktifKullanici.nickname,
+      bool isMatch = await FirestoreService().sendRadarSignal(
+        currentUser: widget.aktifKullanici,
         toUser: degerlendirilenKullanici,
       );
 
@@ -315,7 +313,7 @@ class _SwipeScreenState extends State<SwipeScreen> {
         lastLimitsResetAt: widget.aktifKullanici.lastLimitsResetAt,
       );
 
-      _checkMatchAsync(degerlendirilenKullanici, isSuperMatch: false);
+      _handleMatchResult(degerlendirilenKullanici, isMatch: isMatch, isSuperMatch: false);
     } else {
       // REDDETTİ (Pas Geçti)
       widget.aktifKullanici.passUser(degerlendirilenKullanici.id);
@@ -334,22 +332,10 @@ class _SwipeScreenState extends State<SwipeScreen> {
     });
   }
 
-  Future<void> _checkMatchAsync(MotoUser degerlendirilenKullanici, {required bool isSuperMatch}) async {
-    final bool karsilikliBegeniVarMi = await FirestoreService().checkMutualSignal(
-      widget.aktifKullanici.id,
-      degerlendirilenKullanici.id,
-    );
-
+  void _handleMatchResult(MotoUser degerlendirilenKullanici, {required bool isMatch, required bool isSuperMatch}) {
     if (!mounted) return;
 
-    if (karsilikliBegeniVarMi || isSuperMatch) {
-      // Eşleşme olduğu için karşılıklı sinyalleri (beğenileri) veritabanından temizleyelim
-      await FirestoreService().deleteSignal(widget.aktifKullanici.id, degerlendirilenKullanici.id);
-
-      await FirestoreService().createEmptyChat(
-        currentUser: widget.aktifKullanici,
-        matchedUser: degerlendirilenKullanici,
-      );
+    if (isMatch || isSuperMatch) {
       _eslesmeEkraniGoster(degerlendirilenKullanici, isSuperMatch: isSuperMatch);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

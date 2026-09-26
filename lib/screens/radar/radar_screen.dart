@@ -13,7 +13,8 @@ import 'crossed_paths_screen.dart';
 import '../../models/crossed_path_model.dart';
 import 'sos_sheet.dart';
 import '../../widgets/neumorphic_widgets.dart';
-import 'ride_recording_screen.dart';
+
+import '../../services/sensor_service.dart';
 /// [RadarScreen]
 /// Uygulamanın ana ekranıdır (Harita). 
 /// Kullanıcının mevcut konumunu alır, etrafındaki (yanından geçtiği) sürücüleri ve aktif S.O.S sinyallerini harita üzerinde gösterir.
@@ -43,6 +44,14 @@ class _RadarScreenState extends State<RadarScreen> {
   double _currentSpeedKmH = 0.0;
   Timer? _weatherDebounce;
 
+  // Sürüş Kayıt State
+  bool _isRideRecording = false;
+  Timer? _rideTimer;
+  int _rideDurationSeconds = 0;
+  double _rideTopSpeed = 0.0;
+  double _rideMaxLeanAngle = 0.0;
+  StreamSubscription<double>? _sensorAngleSub;
+
   @override
   void initState() {
     super.initState();
@@ -54,7 +63,70 @@ class _RadarScreenState extends State<RadarScreen> {
   void dispose() {
     _gpsStreamSub?.cancel();
     _weatherDebounce?.cancel();
+    _rideTimer?.cancel();
+    _sensorAngleSub?.cancel();
     super.dispose();
+  }
+
+  void _toggleRideRecording() async {
+    if (_isRideRecording) {
+      // Sürüşü bitir
+      _rideTimer?.cancel();
+      _sensorAngleSub?.cancel();
+      setState(() {
+        _isRideRecording = false;
+      });
+      _showRideSummaryDialog();
+    } else {
+      // Sürüşü başlat
+      await SensorService().requestPermissionAndStart();
+      setState(() {
+        _isRideRecording = true;
+        _rideDurationSeconds = 0;
+        _rideTopSpeed = _currentSpeedKmH; // Mevcut hızdan başla
+        _rideMaxLeanAngle = 0.0;
+      });
+      
+      _rideTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) setState(() => _rideDurationSeconds++);
+      });
+
+      _sensorAngleSub = SensorService().leanAngleStream.listen((angle) {
+        if (mounted) {
+          final absAngle = angle.abs();
+          if (absAngle > _rideMaxLeanAngle) {
+            _rideMaxLeanAngle = absAngle;
+          }
+        }
+      });
+    }
+  }
+
+  void _showRideSummaryDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: NeuColors.surfaceDark,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text("🏁 Sürüş Tamamlandı", style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text("Süre: ${_rideDurationSeconds ~/ 60} dk ${_rideDurationSeconds % 60} sn", style: const TextStyle(color: Colors.white70)),
+            const SizedBox(height: 10),
+            Text("Maks Hız: ${_rideTopSpeed.toStringAsFixed(0)} km/s", style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 18)),
+            const SizedBox(height: 10),
+            Text("Maks Yatış: ${_rideMaxLeanAngle.toStringAsFixed(1)}°", style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold, fontSize: 18)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("KAPAT", style: TextStyle(color: NeuColors.accentOrange)),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _startContinuousGpsStream() async {
@@ -120,6 +192,9 @@ class _RadarScreenState extends State<RadarScreen> {
     final double speedKmH = (position.speed * 3.6).clamp(0.0, 300.0);
     setState(() {
       _currentSpeedKmH = speedKmH;
+      if (_isRideRecording && speedKmH > _rideTopSpeed) {
+        _rideTopSpeed = speedKmH;
+      }
       _benimKonumum = LatLng(position.latitude, position.longitude);
       widget.aktifKullanici.latitude = position.latitude;
       widget.aktifKullanici.longitude = position.longitude;
@@ -592,7 +667,32 @@ class _RadarScreenState extends State<RadarScreen> {
                   right: 16,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
+                      if (_isRideRecording)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.redAccent),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const PulseMarker(
+                                color: Colors.redAccent,
+                                child: Icon(Icons.fiber_manual_record, color: Colors.redAccent, size: 12),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                "${_rideDurationSeconds ~/ 60}:${(_rideDurationSeconds % 60).toString().padLeft(2, '0')}",
+                                style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
                       NeuIconButton(
                         icon: Icons.explore_outlined,
                         iconColor: Colors.white,
@@ -606,17 +706,13 @@ class _RadarScreenState extends State<RadarScreen> {
                       ),
                       const SizedBox(height: 12),
                       NeuIconButton(
-                        icon: Icons.sports_motorsports,
+                        icon: _isRideRecording ? Icons.stop_circle : Icons.sports_motorsports,
                         iconColor: Colors.white,
-                        color: NeuColors.accentOrange,
+                        color: _isRideRecording ? Colors.redAccent : NeuColors.accentOrange,
                         size: 52,
                         iconSize: 24,
-                        tooltip: "Sürüşe Başla (Kayıt & SOS)",
-                        onPressed: () {
-                          Navigator.push(context, MaterialPageRoute(
-                            builder: (_) => RideRecordingScreen(user: widget.aktifKullanici),
-                          ));
-                        },
+                        tooltip: _isRideRecording ? "Sürüşü Bitir" : "Sürüşe Başla (Kayıt & SOS)",
+                        onPressed: _toggleRideRecording,
                       ),
                       const SizedBox(height: 16),
                       NeuIconButton(

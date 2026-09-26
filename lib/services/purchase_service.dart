@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+
 import '../models/user_model.dart';
 import '../services/firestore_service.dart';
 
@@ -35,9 +36,8 @@ class PurchaseService {
   static const String entitlementId = "vip"; // RevenueCat Entitlement ID
 
   // RevenueCat API Anahtarları
-  // TODO: Apple Developer hesabınızı açıp RevenueCat'e bağladıktan sonra iOS anahtarını da ekleyin
   static const String _androidApiKey = "goog_cmNhqXgtIrRrQcbvSGhuHveaXvo";
-  static const String _iosApiKey = "appl_sandbox_motoconnect_monthly"; // Şimdilik Sandbox
+  static const String _iosApiKey = "appl_IUwOfuEauXUFMgfyDPJQpnBwOqR";
   // Tanımlı Aylık VIP Abonelik Planı
   static const List<ProductPackage> subscriptions = [
     ProductPackage(
@@ -52,7 +52,8 @@ class PurchaseService {
     ProductPackage(
       id: "vip_yearly_v2",
       title: "VIP Garaj - 1 Yıllık",
-      description: "12 ay boyunca kesintisiz VIP ayrıcalıkları ve özel kask rozeti.",
+      description:
+          "12 ay boyunca kesintisiz VIP ayrıcalıkları ve özel kask rozeti.",
       priceString: "₺999,99 / yıl",
       type: ProductType.subscription,
       icon: Icons.diamond,
@@ -66,7 +67,8 @@ class PurchaseService {
     ProductPackage(
       id: "super_signal_10",
       title: "10'lu Süper Selektör ⭐",
-      description: "Beğendiğin sürücüye anında bildirimli altın süper selektör çak.",
+      description:
+          "Beğendiğin sürücüye anında bildirimli altın süper selektör çak.",
       priceString: "₺89,99",
       type: ProductType.consumable,
       icon: Icons.star,
@@ -106,8 +108,10 @@ class PurchaseService {
     try {
       await initRevenueCat();
       final logInResult = await Purchases.logIn(uid);
-      debugPrint("RevenueCat logIn başarılı: appUserID=${logInResult.customerInfo.originalAppUserId}");
-      
+      debugPrint(
+        "RevenueCat logIn başarılı: appUserID=${logInResult.customerInfo.originalAppUserId}",
+      );
+
       // Giriş yapıldığında aktif abonelik durumunu hemen kontrol et ve Firestore ile eşitle
       await checkVipStatus(uid);
     } catch (e) {
@@ -134,13 +138,15 @@ class PurchaseService {
     try {
       await initRevenueCat();
       final CustomerInfo customerInfo = await Purchases.getCustomerInfo();
-      
-      final EntitlementInfo? vipEntitlement = customerInfo.entitlements.all[entitlementId] ??
+
+      final EntitlementInfo? vipEntitlement =
+          customerInfo.entitlements.all[entitlementId] ??
           customerInfo.entitlements.all["vip_monthly"] ??
           customerInfo.entitlements.all["premium"] ??
           customerInfo.entitlements.all["pro"];
 
-      final bool isVipActive = vipEntitlement?.isActive == true ||
+      final bool isVipActive =
+          vipEntitlement?.isActive == true ||
           customerInfo.entitlements.active.isNotEmpty;
 
       DateTime? expirationDate;
@@ -154,7 +160,9 @@ class PurchaseService {
       await FirestoreService().updateVipStatus(
         uid,
         isVipActive,
-        subscriptionEndDate: isVipActive ? (expirationDate ?? DateTime.now().add(const Duration(days: 30))) : null,
+        subscriptionEndDate: isVipActive
+            ? (expirationDate ?? DateTime.now().add(const Duration(days: 30)))
+            : null,
       );
 
       return isVipActive;
@@ -174,9 +182,8 @@ class PurchaseService {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => const Center(
-        child: CircularProgressIndicator(color: Colors.amber),
-      ),
+      builder: (ctx) =>
+          const Center(child: CircularProgressIndicator(color: Colors.amber)),
     );
 
     try {
@@ -185,7 +192,8 @@ class PurchaseService {
       if (!kIsWeb && _isConfigured) {
         try {
           final offerings = await Purchases.getOfferings();
-          if (offerings.current != null && offerings.current!.availablePackages.isNotEmpty) {
+          if (offerings.current != null &&
+              offerings.current!.availablePackages.isNotEmpty) {
             final pkg = offerings.current!.availablePackages.firstWhere(
               (p) => p.storeProduct.identifier.contains(package.id),
               orElse: () => offerings.current!.availablePackages.first,
@@ -194,7 +202,9 @@ class PurchaseService {
             final purchaseResult = await Purchases.purchasePackage(pkg);
             final customerInfo = purchaseResult.customerInfo;
             if (customerInfo.latestExpirationDate != null) {
-              expirationDate = DateTime.tryParse(customerInfo.latestExpirationDate!);
+              expirationDate = DateTime.tryParse(
+                customerInfo.latestExpirationDate!,
+              );
             }
           } else {
             throw Exception("Mağazada uygun paket bulunamadı.");
@@ -208,7 +218,9 @@ class PurchaseService {
           throw Exception("Ödeme işlemi başarısız oldu: ${e.message}");
         }
       } else {
-        throw Exception("Satın alma işlemleri Web ortamında desteklenmemektedir.");
+        throw Exception(
+          "Satın alma işlemleri Web ortamında desteklenmemektedir.",
+        );
       }
 
       if (context.mounted) {
@@ -228,19 +240,19 @@ class PurchaseService {
         _showSuccessSheet(context, package, isSandbox: false);
       }
       return true;
-
     } catch (e) {
       if (context.mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Satın alma hatası: $e"), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text("Satın alma hatası: $e"),
+            backgroundColor: Colors.red,
+          ),
         );
       }
       return false;
     }
   }
-
-
 
   /// Satın alma faydalarını tanımlar ve Firestore'a senkronize eder
   Future<void> _grantBenefits(
@@ -249,7 +261,8 @@ class PurchaseService {
     DateTime? subscriptionEndDate,
   }) async {
     if (package.type == ProductType.subscription) {
-      final endDate = subscriptionEndDate ?? DateTime.now().add(const Duration(days: 30));
+      final endDate =
+          subscriptionEndDate ?? DateTime.now().add(const Duration(days: 30));
       user.isPremium = true;
       user.subscriptionEndDate = endDate;
       user.vipTier = package.id.contains("yearly") ? "yearly" : "monthly";
@@ -261,11 +274,18 @@ class PurchaseService {
       );
     } else if (package.id.contains("super")) {
       user.swipeLikesLeft += 10;
-      await FirestoreService().updateLikes(user.id, swipeLikes: user.swipeLikesLeft);
+      await FirestoreService().updateLikes(
+        user.id,
+        swipeLikes: user.swipeLikesLeft,
+      );
     }
   }
 
-  void _showSuccessSheet(BuildContext context, ProductPackage package, {bool isSandbox = false}) {
+  void _showSuccessSheet(
+    BuildContext context,
+    ProductPackage package, {
+    bool isSandbox = false,
+  }) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -292,32 +312,52 @@ class PurchaseService {
                     color: Colors.amber.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.workspace_premium, color: Colors.amber, size: 54),
+                  child: const Icon(
+                    Icons.workspace_premium,
+                    color: Colors.amber,
+                    size: 54,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
               Text(
-                isSandbox ? "Sandbox / Test Satın Alımı Başarılı! 🧪" : "Ödeme Başarılı! 👑",
+                isSandbox
+                    ? "Sandbox / Test Satın Alımı Başarılı! 🧪"
+                    : "Ödeme Başarılı! 👑",
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
                 "${package.title} hesabınıza tanımlandı. Firebase Firestore veritabanında isPremium: true ve subscriptionEndDate alanları başarıyla güncellendi!",
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.amber, fontSize: 13, height: 1.4),
+                style: const TextStyle(
+                  color: Colors.amber,
+                  fontSize: 13,
+                  height: 1.4,
+                ),
               ),
               const SizedBox(height: 24),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.amber,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 ),
                 onPressed: () => Navigator.pop(ctx),
                 child: const Text(
                   "Gazlamaya Başla! 🏍️",
-                  style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15),
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
                 ),
               ),
             ],
@@ -328,13 +368,16 @@ class PurchaseService {
   }
 
   /// Satın Alımları Geri Yükle (Restore Purchases)
-  Future<void> restorePurchases(BuildContext context, {required MotoUser user, VoidCallback? onRestored}) async {
+  Future<void> restorePurchases(
+    BuildContext context, {
+    required MotoUser user,
+    VoidCallback? onRestored,
+  }) async {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => const Center(
-        child: CircularProgressIndicator(color: Colors.amber),
-      ),
+      builder: (ctx) =>
+          const Center(child: CircularProgressIndicator(color: Colors.amber)),
     );
 
     try {
@@ -347,7 +390,9 @@ class PurchaseService {
           if (customerInfo.entitlements.active.isNotEmpty) {
             isRestored = true;
             if (customerInfo.latestExpirationDate != null) {
-              expirationDate = DateTime.tryParse(customerInfo.latestExpirationDate!);
+              expirationDate = DateTime.tryParse(
+                customerInfo.latestExpirationDate!,
+              );
             }
           }
         } catch (_) {
@@ -366,13 +411,19 @@ class PurchaseService {
         expirationDate ??= DateTime.now().add(const Duration(days: 30));
         user.isPremium = true;
         user.subscriptionEndDate = expirationDate;
-        await FirestoreService().updateVipStatus(user.id, true, subscriptionEndDate: expirationDate);
+        await FirestoreService().updateVipStatus(
+          user.id,
+          true,
+          subscriptionEndDate: expirationDate,
+        );
         onRestored?.call();
 
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text("Aboneliğiniz kontrol edildi ve VIP üyeliğiniz geri yüklendi! ✅"),
+              content: Text(
+                "Aboneliğiniz kontrol edildi ve VIP üyeliğiniz geri yüklendi! ✅",
+              ),
               backgroundColor: Colors.green,
             ),
           );
@@ -382,13 +433,19 @@ class PurchaseService {
       if (context.mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Geri yükleme hatası: $e"), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text("Geri yükleme hatası: $e"),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
   }
 
-  static Future<void> cancelSubscription(BuildContext context, MotoUser user) async {
+  static Future<void> cancelSubscription(
+    BuildContext context,
+    MotoUser user,
+  ) async {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -404,7 +461,9 @@ class PurchaseService {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Aboneliğiniz başarıyla iptal edildi ve ayrıcalıklarınız kapatıldı."),
+            content: Text(
+              "Aboneliğiniz başarıyla iptal edildi ve ayrıcalıklarınız kapatıldı.",
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -413,7 +472,10 @@ class PurchaseService {
       if (context.mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("İptal sırasında hata oluştu: $e"), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text("İptal sırasında hata oluştu: $e"),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }

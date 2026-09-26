@@ -117,6 +117,17 @@ class FirestoreService {
     } catch (_) {}
   }
 
+  Future<void> updateUserToken(String uid, String token) async {
+    try {
+      await _usersRef.doc(uid).update({
+        'fcmToken': token,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      debugPrint("updateUserToken error: $e");
+    }
+  }
+
   Future<void> updatePhotos(String uid, List<String> imageUrls) async {
     try {
       // SADECE 'http' ile başlayan gerçek linkleri tut, diğer (base64 vb) her şeyi sil.
@@ -607,52 +618,68 @@ class FirestoreService {
     }
   }
 
-  Future<void> sendRadarSignal({
-    required String fromUserId,
-    required String fromNickname,
+  Future<bool> sendRadarSignal({
+    required MotoUser currentUser,
     required MotoUser toUser,
   }) async {
     try {
-      final docId = "${fromUserId}_${toUser.id}";
-      await _signalsRef.doc(docId).set({
-        'fromUserId': fromUserId,
-        'fromNickname': fromNickname,
-        'toUserId': toUser.id,
-        'toNickname': toUser.nickname,
-        'timestamp': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      bool isMatch = await checkMutualSignal(currentUser.id, toUser.id);
 
-      await _usersRef.doc(fromUserId).update({
+      if (isMatch) {
+        await deleteSignal(currentUser.id, toUser.id);
+        await createEmptyChat(currentUser: currentUser, matchedUser: toUser);
+      } else {
+        final docId = "${currentUser.id}_${toUser.id}";
+        await _signalsRef.doc(docId).set({
+          'fromUserId': currentUser.id,
+          'fromNickname': currentUser.nickname,
+          'toUserId': toUser.id,
+          'toNickname': toUser.nickname,
+          'timestamp': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
+
+      await _usersRef.doc(currentUser.id).update({
         'likedUserIds': FieldValue.arrayUnion([toUser.id]),
         'updatedAt': FieldValue.serverTimestamp(),
       });
+      return isMatch;
     } catch (e) {
       debugPrint("sendRadarSignal error: $e");
+      return false;
     }
   }
 
-  Future<void> sendSuperSignal({
-    required String fromUserId,
-    required String fromNickname,
+  Future<bool> sendSuperSignal({
+    required MotoUser currentUser,
     required MotoUser toUser,
   }) async {
     try {
-      final docId = "${fromUserId}_${toUser.id}";
-      await _signalsRef.doc(docId).set({
-        'fromUserId': fromUserId,
-        'fromNickname': fromNickname,
-        'toUserId': toUser.id,
-        'toNickname': toUser.nickname,
-        'isSuperSignal': true,
-        'timestamp': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      bool isMatch = await checkMutualSignal(currentUser.id, toUser.id);
 
-      await _usersRef.doc(fromUserId).update({
+      if (isMatch) {
+        await deleteSignal(currentUser.id, toUser.id);
+        await createEmptyChat(currentUser: currentUser, matchedUser: toUser);
+      } else {
+        final docId = "${currentUser.id}_${toUser.id}";
+        await _signalsRef.doc(docId).set({
+          'fromUserId': currentUser.id,
+          'fromNickname': currentUser.nickname,
+          'toUserId': toUser.id,
+          'toNickname': toUser.nickname,
+          'isSuperSignal': true,
+          'timestamp': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
+
+      await _usersRef.doc(currentUser.id).update({
         'likedUserIds': FieldValue.arrayUnion([toUser.id]),
         'updatedAt': FieldValue.serverTimestamp(),
       });
+      return isMatch;
     } catch (e) {
       debugPrint("sendSuperSignal error: $e");
+      return false;
     }
   }
 

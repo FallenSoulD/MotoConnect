@@ -242,9 +242,8 @@ class _RadarDriverCardState extends State<RadarDriverCard> {
                         radarLikes: widget.currentUser.radarLikesLeft,
                         lastLimitsResetAt: widget.currentUser.lastLimitsResetAt,
                       );
-                      await FirestoreService().sendRadarSignal(
-                        fromUserId: widget.currentUser.id,
-                        fromNickname: widget.currentUser.nickname,
+                      bool isMatch = await FirestoreService().sendRadarSignal(
+                        currentUser: widget.currentUser,
                         toUser: widget.selectedRider,
                       );
                       if (!context.mounted) return;
@@ -254,7 +253,7 @@ class _RadarDriverCardState extends State<RadarDriverCard> {
                             children: [
                               const Icon(Icons.flash_on, color: Colors.amber),
                               const SizedBox(width: 8),
-                              Text("${widget.selectedRider.nickname} adlı sürücüye selektör atıldı! ⚡"),
+                              Text(isMatch ? "EŞLEŞTİNİZ! Sohbet odası oluşturuldu 🎉" : "${widget.selectedRider.nickname} adlı sürücüye selektör atıldı! ⚡"),
                             ],
                           ),
                           backgroundColor: NeuColors.surfaceDark,
@@ -291,9 +290,8 @@ class _RadarDriverCardState extends State<RadarDriverCard> {
                   onPressed: () async {
                     if (widget.currentUser.useSuperLike()) {
                       widget.onSignalTriggered();
-                      await FirestoreService().sendSuperSignal(
-                        fromUserId: widget.currentUser.id,
-                        fromNickname: widget.currentUser.nickname,
+                      bool isMatch = await FirestoreService().sendSuperSignal(
+                        currentUser: widget.currentUser,
                         toUser: widget.selectedRider,
                       );
                       await FirestoreService().updateLikes(
@@ -304,7 +302,7 @@ class _RadarDriverCardState extends State<RadarDriverCard> {
                       if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text("⭐ ${widget.selectedRider.nickname} adlı sürücüye SÜPER SELEKTÖR gönderildi! 🔥"),
+                          content: Text(isMatch ? "EŞLEŞTİNİZ! Sohbet odası oluşturuldu 🎉" : "⭐ ${widget.selectedRider.nickname} adlı sürücüye SÜPER SELEKTÖR gönderildi! 🔥"),
                           backgroundColor: Colors.amber[900],
                           duration: const Duration(seconds: 2),
                         ),

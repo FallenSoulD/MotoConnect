@@ -9,11 +9,10 @@ import '../models/user_model.dart';
 class AdHelper {
   static String get bannerAdUnitId {
     if (kIsWeb) return ''; // Web not supported natively by this plugin
-    // TODO: AdMob'dan aldığınız GERÇEK Banner (Afiş) Reklam Kimliklerini buraya girin.
     if (Platform.isAndroid) {
       return 'ca-app-pub-4793704295217533/7301179551';
     } else if (Platform.isIOS) {
-      return 'ca-app-pub-4793704295217533/5306383677'; // TEST ID -> GERÇEĞİYLE DEĞİŞTİR
+      return 'ca-app-pub-4793704295217533/5306383677';
     }
     return '';
   }

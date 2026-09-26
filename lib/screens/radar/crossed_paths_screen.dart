@@ -210,9 +210,8 @@ class _CrossedPathsScreenState extends State<CrossedPathsScreen> {
                               if (_likedUserIds.contains(rider.id)) {
                                 // SÜPER SELEKTÖR AT
                                 if (widget.currentUser.useSuperLike()) {
-                                  await FirestoreService().sendSuperSignal(
-                                    fromUserId: widget.currentUser.id,
-                                    fromNickname: widget.currentUser.nickname,
+                                  bool isMatch = await FirestoreService().sendSuperSignal(
+                                    currentUser: widget.currentUser,
                                     toUser: rider,
                                   );
                                   await FirestoreService().updateLikes(
@@ -223,7 +222,7 @@ class _CrossedPathsScreenState extends State<CrossedPathsScreen> {
                                   if (!context.mounted) return;
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text("⭐ ${rider.nickname} adlı sürücüye SÜPER SELEKTÖR gönderildi!"),
+                                      content: Text(isMatch ? "EŞLEŞTİNİZ! Sohbet odası oluşturuldu 🎉" : "⭐ ${rider.nickname} adlı sürücüye SÜPER SELEKTÖR gönderildi!"),
                                       backgroundColor: Colors.amber[900],
                                     ),
                                   );
@@ -238,9 +237,8 @@ class _CrossedPathsScreenState extends State<CrossedPathsScreen> {
                               } else {
                                 // NORMAL SELEKTÖR AT VE BUTONU GÜNCELLE
                                 if (widget.currentUser.useRadarLike()) {
-                                  await FirestoreService().sendRadarSignal(
-                                    fromUserId: widget.currentUser.id,
-                                    fromNickname: widget.currentUser.nickname,
+                                  bool isMatch = await FirestoreService().sendRadarSignal(
+                                    currentUser: widget.currentUser,
                                     toUser: rider,
                                   );
                                   await FirestoreService().updateLikes(
@@ -254,7 +252,7 @@ class _CrossedPathsScreenState extends State<CrossedPathsScreen> {
                                   if (!context.mounted) return;
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text("${rider.nickname} adlı sürücüye selektör çakıldı! ⚡"),
+                                      content: Text(isMatch ? "EŞLEŞTİNİZ! Sohbet odası oluşturuldu 🎉" : "${rider.nickname} adlı sürücüye selektör çakıldı! ⚡"),
                                       backgroundColor: const Color(0xFF222222),
                                     ),
                                   );

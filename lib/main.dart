@@ -8,6 +8,7 @@ import 'services/firestore_service.dart';
 import 'widgets/neumorphic_widgets.dart';
 
 import 'services/ad_helper.dart';
+import 'services/push_notification_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -42,6 +43,13 @@ void main() async {
     FirestoreService().purgeAllTestUsers();
   } catch (e) {
     debugPrint("Bot temizleme hatası: $e");
+  }
+
+  // Push Bildirim Servisini Başlat
+  try {
+    await PushNotificationService().init();
+  } catch (e) {
+    debugPrint("PushNotificationService init error: $e");
   }
 
 

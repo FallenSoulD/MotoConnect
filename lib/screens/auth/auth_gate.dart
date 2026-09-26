@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/user_model.dart';
 import '../../services/firestore_service.dart';
 import '../../services/purchase_service.dart';
+import '../../services/push_notification_service.dart';
 import '../../widgets/neumorphic_widgets.dart';
 import '../main_screen.dart';
 import 'login_screen.dart';
@@ -36,6 +37,9 @@ class AuthGate extends StatelessWidget {
         if (firebaseUser != null) {
           // RevenueCat oturumunu ve aktif abonelik durumunu arka planda kontrol et
           PurchaseService().loginUser(firebaseUser.uid);
+          
+          // Kullanıcı bildirim tokenını kaydet
+          PushNotificationService().saveTokenToDatabase(firebaseUser.uid);
 
           return StreamBuilder<MotoUser?>(
             stream: FirestoreService().streamUserProfile(firebaseUser.uid),
