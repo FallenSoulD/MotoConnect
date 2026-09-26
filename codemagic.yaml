@@ -21,12 +21,12 @@ workflows:
       - name: Set up code signing
         script: |
           app-store-connect fetch-signing-files com.fallensould.motoconnect \
-            --type IOS_APP_DEVELOPMENT \
+            --type IOS_APP_STORE \
             --platform IOS \
             --create
           keychain initialize
           app-store-connect certificates list \
-            --type IOS_DEVELOPMENT \
+            --type IOS_DISTRIBUTION \
             --certificate-key=@env:CERTIFICATE_KEY \
             --save
           keychain add-certificates
@@ -40,8 +40,3 @@ workflows:
 
     artifacts:
       - build/ios/ipa/*.ipa
-
-    publishing:
-      app_store_connect:
-        auth: integration
-        submit_to_testflight: true
