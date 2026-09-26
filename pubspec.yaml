@@ -35,7 +35,7 @@ dependencies:
   flutter_map: ^8.3.1
   latlong2: ^0.10.1
   image_picker: ^1.2.3
-  firebase_core: ^4.13.0
+  firebase_core: ^4.15.0
   firebase_auth: ^6.5.7
   cloud_firestore: ^6.8.0
 
