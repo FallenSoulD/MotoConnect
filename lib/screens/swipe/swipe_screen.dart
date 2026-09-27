@@ -120,10 +120,6 @@ class _SwipeScreenState extends State<SwipeScreen> {
   }
 
   void _filtreleProfiller() {
-    final myStyle = widget.aktifKullanici.ridingStyle.trim().toLowerCase();
-    final myMotor = widget.aktifKullanici.primaryMotorType.trim().toLowerCase();
-    final myHobbies = widget.aktifKullanici.hobbies.map((e) => e.trim().toLowerCase()).toList();
-
     if (_seciliTarzFiltresi == "Tümü") {
       karsilasilacakProfiller = List.from(tumProfiller);
     } else {
