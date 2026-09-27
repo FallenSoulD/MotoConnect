@@ -990,7 +990,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
       stream: FirebaseFirestore.instance.collection('users').snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return const Center(child: Text("Raporlar yüklenirken hata oluştu.", style: TextStyle(color: Colors.white70)));
+          return const Center(child: Text("Kullanıcılar yüklenirken hata oluştu.", style: TextStyle(color: Colors.white70)));
         }
         if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
           return const Center(child: CircularProgressIndicator(color: Colors.redAccent));
@@ -1104,7 +1104,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
 
     if (confirm == true) {
       try {
-        await FirestoreService().deleteUserAccount(userId);
+        await FirestoreService().deleteUserAccount(userId, isAdminAction: true);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text("'$nickname' başarıyla silindi."), backgroundColor: Colors.green),

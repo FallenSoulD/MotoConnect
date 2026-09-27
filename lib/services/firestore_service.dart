@@ -346,7 +346,7 @@ class FirestoreService {
     }
   }
 
-  Future<void> deleteUserAccount(String uid) async {
+  Future<void> deleteUserAccount(String uid, {bool isAdminAction = false}) async {
     // 1. Kullanıcının katıldığı sohbetleri sil
     try {
       final chatSnap = await _chatsRef
@@ -436,18 +436,21 @@ class FirestoreService {
       await _usersRef.doc(uid).delete();
     } catch (_) {}
 
-    // 9. Firebase Auth hesabını sil
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        await user.delete();
-      }
-    } catch (_) {}
+    // EĞER İŞLEMİ ADMIN YAPIYORSA KENDİ AUTH HESABINI SİLMESİN/ÇIKIŞ YAPMASIN
+    if (!isAdminAction) {
+      // 9. Firebase Auth hesabını sil
+      try {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          await user.delete();
+        }
+      } catch (_) {}
 
-    // 10. Çıkış yap
-    try {
-      await FirebaseAuth.instance.signOut();
-    } catch (_) {}
+      // 10. Çıkış yap
+      try {
+        await FirebaseAuth.instance.signOut();
+      } catch (_) {}
+    }
   }
 
   // ================= CANLI RADAR & GERÇEK KULLANICILAR =================
