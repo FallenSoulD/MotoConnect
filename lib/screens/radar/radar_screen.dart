@@ -681,13 +681,10 @@ class _RadarScreenState extends State<RadarScreen> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const PulseMarker(
-                                color: Colors.redAccent,
-                                child: Icon(Icons.fiber_manual_record, color: Colors.redAccent, size: 12),
-                              ),
+                              const Icon(Icons.fiber_manual_record, color: Colors.redAccent, size: 12),
                               const SizedBox(width: 6),
                               Text(
-                                "${_rideDurationSeconds ~/ 60}:${(_rideDurationSeconds % 60).toString().padLeft(2, '0')}",
+                                "Sürüş kayıt ediliyor - ${_rideDurationSeconds ~/ 60}:${(_rideDurationSeconds % 60).toString().padLeft(2, '0')}",
                                 style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
                               ),
                             ],
