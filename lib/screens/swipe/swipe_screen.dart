@@ -83,12 +83,28 @@ class _SwipeScreenState extends State<SwipeScreen> {
         }
       }
 
+      final myStyle = widget.aktifKullanici.ridingStyle.trim().toLowerCase();
+      final myMotor = widget.aktifKullanici.primaryMotorType.trim().toLowerCase();
+      final myHobbies = widget.aktifKullanici.hobbies.map((e) => e.trim().toLowerCase()).toList();
+
       for (final event in crossedEvents) {
         addValidUser(event.rider);
       }
 
       for (final rider in allUsers) {
-        addValidUser(rider);
+        bool sharesFeature = false;
+        
+        if (myStyle.isNotEmpty && rider.ridingStyle.trim().toLowerCase().contains(myStyle)) {
+          sharesFeature = true;
+        } else if (myMotor.isNotEmpty && rider.primaryMotorType.trim().toLowerCase().contains(myMotor)) {
+          sharesFeature = true;
+        } else if (rider.hobbies.any((h) => myHobbies.contains(h.trim().toLowerCase()))) {
+          sharesFeature = true;
+        }
+
+        if (sharesFeature) {
+          addValidUser(rider);
+        }
       }
 
       if (mounted) {
