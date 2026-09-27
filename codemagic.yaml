@@ -17,6 +17,10 @@ workflows:
       - name: Set up code signing
         script: |
           app-store-connect fetch-signing-files com.fallensould.motoconnect \
+            --type IOS_APP_DEVELOPMENT \
+            --platform IOS \
+            --create
+          app-store-connect fetch-signing-files com.fallensould.motoconnect \
             --type IOS_APP_STORE \
             --platform IOS \
             --create
