@@ -44,15 +44,15 @@ class _SwipeScreenState extends State<SwipeScreen> {
     super.dispose();
   }
 
+  final Set<String> _crossedUserIds = {};
+
   void _profilleriYukle() async {
     try {
-      // 1. AYNI ROTADAN GEÇEN / KESİŞEN SÜRÜCÜLER
       final crossedEvents = await FirestoreService()
           .streamCrossedPaths(widget.aktifKullanici.id)
           .first
           .timeout(const Duration(seconds: 4), onTimeout: () => []);
 
-      // 2. VERİTABANINDAN GENEL KULLANICILAR (Aynı hobilere/tarza sahip olanları eşleştirmek için)
       final allUsers = await FirestoreService().getRadarUsersOnce(
           currentUserId: widget.aktifKullanici.id, 
           currentUserEmail: widget.aktifKullanici.email
@@ -65,10 +65,9 @@ class _SwipeScreenState extends State<SwipeScreen> {
         if (rider.id.isEmpty || rider.id == widget.aktifKullanici.id) return;
         if (myEmail.isNotEmpty && rider.email.trim().toLowerCase() == myEmail) return;
         if (widget.aktifKullanici.isUserBlocked(rider.id)) return;
-        if (widget.aktifKullanici.isUserPassed(rider.id)) return; // Sadece reddedilenleri gizle
+        if (widget.aktifKullanici.isUserPassed(rider.id)) return;
         if (FirestoreService.isTestUser(rider.id, rider.nickname, rider.email)) return;
         
-        // Tekilleştirme: Aynı kişiye ait olası farklı test hesaplarını gizlemek için nickname'i de kontrol et
         final nicknameKey = rider.nickname.trim().toLowerCase();
         bool alreadyExists = false;
         for (final existingRider in uniqueRiders.values) {
@@ -83,28 +82,14 @@ class _SwipeScreenState extends State<SwipeScreen> {
         }
       }
 
-      final myStyle = widget.aktifKullanici.ridingStyle.trim().toLowerCase();
-      final myMotor = widget.aktifKullanici.primaryMotorType.trim().toLowerCase();
-      final myHobbies = widget.aktifKullanici.hobbies.map((e) => e.trim().toLowerCase()).toList();
-
+      _crossedUserIds.clear();
       for (final event in crossedEvents) {
+        _crossedUserIds.add(event.rider.id);
         addValidUser(event.rider);
       }
 
       for (final rider in allUsers) {
-        bool sharesFeature = false;
-        
-        if (myStyle.isNotEmpty && rider.ridingStyle.trim().toLowerCase().contains(myStyle)) {
-          sharesFeature = true;
-        } else if (myMotor.isNotEmpty && rider.primaryMotorType.trim().toLowerCase().contains(myMotor)) {
-          sharesFeature = true;
-        } else if (rider.hobbies.any((h) => myHobbies.contains(h.trim().toLowerCase()))) {
-          sharesFeature = true;
-        }
-
-        if (sharesFeature) {
-          addValidUser(rider);
-        }
+        addValidUser(rider);
       }
 
       if (mounted) {
@@ -133,7 +118,7 @@ class _SwipeScreenState extends State<SwipeScreen> {
       karsilasilacakProfiller = karsilasilacakProfiller.where((u) => u.isVerified).toList();
     }
 
-    // Ortak özellikleri (tarz, motor tipi veya HOBİLERİ) olanları puanlayıp en üste al
+    // Yolda karşılaşılanlar ve ortak özellikleri olanları en üste al
     karsilasilacakProfiller.sort((a, b) {
       final myStyle = widget.aktifKullanici.ridingStyle.trim().toLowerCase();
       final myMotor = widget.aktifKullanici.primaryMotorType.trim().toLowerCase();
@@ -142,15 +127,17 @@ class _SwipeScreenState extends State<SwipeScreen> {
       int aScore = 0;
       int bScore = 0;
 
+      if (_crossedUserIds.contains(a.id)) aScore += 100;
       if (a.ridingStyle.trim().toLowerCase().contains(myStyle) && myStyle.isNotEmpty) aScore += 2;
       if (a.primaryMotorType.trim().toLowerCase().contains(myMotor) && myMotor.isNotEmpty) aScore += 2;
       aScore += a.hobbies.where((h) => myHobbies.contains(h.trim().toLowerCase())).length;
 
+      if (_crossedUserIds.contains(b.id)) bScore += 100;
       if (b.ridingStyle.trim().toLowerCase().contains(myStyle) && myStyle.isNotEmpty) bScore += 2;
       if (b.primaryMotorType.trim().toLowerCase().contains(myMotor) && myMotor.isNotEmpty) bScore += 2;
       bScore += b.hobbies.where((h) => myHobbies.contains(h.trim().toLowerCase())).length;
 
-      final compare = bScore.compareTo(aScore); // Yüksek skor en üstte
+      final compare = bScore.compareTo(aScore);
       if (compare != 0) return compare;
       return a.id.compareTo(b.id);
     });
