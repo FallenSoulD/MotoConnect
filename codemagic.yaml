@@ -14,28 +14,34 @@ workflows:
         script: |
           flutter pub get
 
-      - name: Set up code signing
+      - name: Sign and Build iOS app
         script: |
+          echo "=== KEYCHAIN INITIALIZE ==="
           keychain initialize
-          echo ">>> Fetching App Store signing files..."
+
+          echo "=== FETCH APP STORE CERTS ==="
           app-store-connect fetch-signing-files com.fallensould.motoconnect \
             --type IOS_APP_STORE \
             --create
-          echo ">>> Fetching Development signing files..."
+
+          echo "=== FETCH DEV CERTS ==="
           app-store-connect fetch-signing-files com.fallensould.motoconnect \
             --type IOS_APP_DEVELOPMENT \
             --create
-          echo ">>> Adding certificates to keychain..."
-          keychain add-certificates
-          echo ">>> Applying profiles to Xcode project..."
-          xcode-project use-profiles
-          echo ">>> Listing signing identities in keychain..."
-          security find-identity -v -p codesigning
-          echo ">>> Listing provisioning profiles..."
-          ls -la ~/Library/MobileDevice/Provisioning\ Profiles/ || echo "No profiles found"
 
-      - name: Build iOS app
-        script: |
+          echo "=== ADD CERTS TO KEYCHAIN ==="
+          keychain add-certificates
+
+          echo "=== USE PROFILES ==="
+          xcode-project use-profiles
+
+          echo "=== DEBUG: SIGNING IDENTITIES ==="
+          security find-identity -v -p codesigning
+
+          echo "=== DEBUG: PROVISIONING PROFILES ==="
+          ls -la ~/Library/MobileDevice/Provisioning\ Profiles/ || echo "No profiles"
+
+          echo "=== BUILDING IPA ==="
           flutter build ipa \
             --release \
             --export-options-plist=/Users/builder/export_options.plist
