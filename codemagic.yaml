@@ -9,6 +9,9 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.fallensould.motoconnect
     scripts:
       - name: Install Flutter dependencies
         script: |
@@ -16,15 +19,11 @@ workflows:
 
       - name: Set up code signing
         script: |
-          app-store-connect fetch-signing-files com.fallensould.motoconnect \
-            --type IOS_APP_DEVELOPMENT \
-            --platform IOS \
-            --create
+          keychain initialize
           app-store-connect fetch-signing-files com.fallensould.motoconnect \
             --type IOS_APP_STORE \
             --platform IOS \
             --create
-          keychain initialize
           keychain add-certificates
           xcode-project use-profiles
 
@@ -36,3 +35,7 @@ workflows:
 
     artifacts:
       - build/ios/ipa/*.ipa
+
+    publishing:
+      app_store_connect:
+        auth: integration
