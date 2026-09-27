@@ -20,11 +20,11 @@ class _SwipeScreenState extends State<SwipeScreen> {
   List<MotoUser> tumProfiller = [];
   List<MotoUser> karsilasilacakProfiller = [];
   bool _yukleniyor = true;
-  String _seciliTarzFiltresi = "Bana Benzeyenler";
+  String _seciliTarzFiltresi = "Tümü";
   bool _sadeceDogrulanmislar = false;
   int _swipeCount = 0;
 
-  final List<String> _tarzlar = ["Bana Benzeyenler", "Tümü", "Racing", "Naked", "Enduro", "Cruiser"];
+  final List<String> _tarzlar = ["Tümü", "Racing", "Naked", "Enduro", "Cruiser"];
   final ScrollController _profileScrollController = ScrollController();
 
   // SÜRÜKLEME / KAYDIRMA (SWIPE GESTURE) DEĞİŞKENLERİ
@@ -65,8 +65,7 @@ class _SwipeScreenState extends State<SwipeScreen> {
         if (rider.id.isEmpty || rider.id == widget.aktifKullanici.id) return;
         if (myEmail.isNotEmpty && rider.email.trim().toLowerCase() == myEmail) return;
         if (widget.aktifKullanici.isUserBlocked(rider.id)) return;
-        if (widget.aktifKullanici.isUserPassed(rider.id)) return;
-        if (widget.aktifKullanici.isUserLiked(rider.id)) return;
+        if (widget.aktifKullanici.isUserPassed(rider.id)) return; // Sadece reddedilenleri gizle
         if (FirestoreService.isTestUser(rider.id, rider.nickname, rider.email)) return;
         
         // Tekilleştirme: Aynı kişiye ait olası farklı test hesaplarını gizlemek için nickname'i de kontrol et
@@ -111,17 +110,6 @@ class _SwipeScreenState extends State<SwipeScreen> {
 
     if (_seciliTarzFiltresi == "Tümü") {
       karsilasilacakProfiller = List.from(tumProfiller);
-    } else if (_seciliTarzFiltresi == "Bana Benzeyenler") {
-      karsilasilacakProfiller = tumProfiller.where((u) {
-        bool matchesStyle = myStyle.isNotEmpty && u.ridingStyle.trim().toLowerCase().contains(myStyle);
-        bool matchesMotor = myMotor.isNotEmpty && u.primaryMotorType.trim().toLowerCase().contains(myMotor);
-        bool hasCommonHobby = u.hobbies.any((h) => myHobbies.contains(h.trim().toLowerCase()));
-        return matchesStyle || matchesMotor || hasCommonHobby;
-      }).toList();
-      if (karsilasilacakProfiller.isEmpty) {
-        // Eğer tam uyan kimse yoksa, yine de herkesi gösterelim ama en çok benzeyenleri başa alalım
-        karsilasilacakProfiller = List.from(tumProfiller);
-      }
     } else {
       karsilasilacakProfiller = tumProfiller.where((u) {
         return u.ridingStyle.toLowerCase().contains(_seciliTarzFiltresi.toLowerCase()) ||
