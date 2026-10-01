@@ -55,20 +55,7 @@ class AuthService {
       if (firebaseUser == null) return null;
       final email = firebaseUser.email ?? "";
 
-      // Aynı e-postanın başka bir hesapta olup olmadığını kontrol et
-      if (email.isNotEmpty) {
-        final isTaken = await FirestoreService().isEmailTakenByOtherUser(
-          firebaseUser.uid,
-          email,
-        );
-        if (isTaken) {
-          // Başka bir hesap var, bu yüzden bu yeni auth hesabını da silebiliriz ki auth çöplük olmasın
-          await firebaseUser.delete();
-          throw Exception(
-            "Bu e-posta adresi başka bir kayıt yöntemi ile zaten kullanılıyor. Lütfen doğru yöntemle giriş yapın.",
-          );
-        }
-      }
+      // Orphaned firestore dokümanı varsa girişi engelleme (kullanıcı auth hesabını silmiş olabilir)
 
       // RevenueCat'e Firebase UID'sini tanımla ve aboneliği senkronize et
       try {
@@ -102,6 +89,11 @@ class AuthService {
         );
 
         await FirestoreService().createUserProfile(userProfile, email: email);
+      }
+      
+      // Mükerrer veya orphaned eski dokümanları temizle
+      if (email.isNotEmpty) {
+        await FirestoreService().cleanDuplicateUserProfiles(firebaseUser.uid, email);
       }
 
       return userProfile;
@@ -176,19 +168,7 @@ class AuthService {
       } else {
         nickname = "Apple Sürücüsü";
       }
-      // Aynı e-postanın başka bir hesapta olup olmadığını kontrol et
-      if (email.isNotEmpty) {
-        final isTaken = await FirestoreService().isEmailTakenByOtherUser(
-          firebaseUser.uid,
-          email,
-        );
-        if (isTaken) {
-          await firebaseUser.delete();
-          throw Exception(
-            "Bu e-posta adresi başka bir kayıt yöntemi ile zaten kullanılıyor. Lütfen doğru yöntemle giriş yapın.",
-          );
-        }
-      }
+      // Orphaned firestore dokümanı varsa girişi engelleme (kullanıcı auth hesabını silmiş olabilir)
 
       // RevenueCat senkronizasyonu
       try {
@@ -229,6 +209,11 @@ class AuthService {
           }
           await FirestoreService().updateUserProfile(userProfile);
         }
+      }
+
+      // Mükerrer veya orphaned eski dokümanları temizle
+      if (email.isNotEmpty) {
+        await FirestoreService().cleanDuplicateUserProfiles(firebaseUser.uid, email);
       }
 
       return userProfile;
