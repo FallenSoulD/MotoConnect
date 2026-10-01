@@ -58,24 +58,22 @@ class _LoginScreenState extends State<LoginScreen> {
       if (user != null) {
         _anaEkranaGec(user);
       } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Google ile giriş iptal edildi veya tamamlanamadı."),
-              backgroundColor: NeuColors.surfaceLight,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Google giriş hatası: $e"),
-            backgroundColor: Colors.red[800],
+        final ctx = navigatorKey.currentContext ?? context;
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          const SnackBar(
+            content: Text("Google ile giriş iptal edildi veya tamamlanamadı."),
+            backgroundColor: NeuColors.surfaceLight,
           ),
         );
       }
+    } catch (e) {
+      final ctx = navigatorKey.currentContext ?? context;
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        SnackBar(
+          content: Text("Google giriş hatası: $e"),
+          backgroundColor: Colors.red[800],
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -100,35 +98,33 @@ class _LoginScreenState extends State<LoginScreen> {
       if (e.code == 'popup-closed-by-user' || e.code == 'canceled' || e.code == 'user-cancelled') {
         return;
       }
-      if (mounted) {
-        String msg = "Apple ile giriş başarısız!";
-        if (e.code == 'account-exists-with-different-credential') {
-          msg = "Bu e-posta başka bir giriş yöntemiyle ilişkilendirilmiş.";
-        } else if (e.code == 'network-request-failed') {
-          msg = "İnternet bağlantınızı kontrol edin.";
-        } else {
-          msg = "Apple giriş hatası: ${e.message ?? e.code}";
-        }
-        ScaffoldMessenger.of(context).showSnackBar(
+      String msg = "Apple ile giriş başarısız!";
+      if (e.code == 'account-exists-with-different-credential') {
+        msg = "Bu e-posta başka bir giriş yöntemiyle ilişkilendirilmiş.";
+      } else if (e.code == 'network-request-failed') {
+        msg = "İnternet bağlantınızı kontrol edin.";
+      } else {
+        msg = "Apple giriş hatası: ${e.message ?? e.code}";
+      }
+      final ctx = navigatorKey.currentContext ?? context;
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: Colors.red[800],
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } catch (e) {
+      final errStr = e.toString();
+      if (!errStr.contains("canceled") && !errStr.contains("iptal") && !errStr.contains("popup-closed-by-user")) {
+        final ctx = navigatorKey.currentContext ?? context;
+        ScaffoldMessenger.of(ctx).showSnackBar(
           SnackBar(
-            content: Text(msg),
+            content: Text("Apple giriş hatası: $e"),
             backgroundColor: Colors.red[800],
             duration: const Duration(seconds: 4),
           ),
         );
-      }
-    } catch (e) {
-      final errStr = e.toString();
-      if (!errStr.contains("canceled") && !errStr.contains("iptal") && !errStr.contains("popup-closed-by-user")) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("Apple giriş hatası: $e"),
-              backgroundColor: Colors.red[800],
-              duration: const Duration(seconds: 4),
-            ),
-          );
-        }
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -188,15 +184,49 @@ class _LoginScreenState extends State<LoginScreen> {
       if (e.code == 'email-already-in-use') msg = "Bu e-posta zaten kullanımda.";
       if (e.code == 'weak-password') msg = "Şifreniz en az 6 karakter olmalıdır.";
 
+      final ctx = navigatorKey.currentContext ?? context;
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        SnackBar(content: Text(msg), backgroundColor: Colors.red[800]),
+      );
+    } catch (e) {
+      final ctx = navigatorKey.currentContext ?? context;
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        SnackBar(content: Text("Hata oluştu: $e"), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleForgotPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Lütfen şifrenizi sıfırlamak için e-posta adresinizi girin."),
+          backgroundColor: NeuColors.accentOrange,
+        ),
+      );
+      return;
+    }
+    setState(() => _isLoading = true);
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg), backgroundColor: Colors.red[800]),
+          const SnackBar(
+            content: Text("Şifre sıfırlama bağlantısı e-postanıza gönderildi!"),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Hata oluştu: $e"), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text("Şifre sıfırlama hatası: $e"),
+            backgroundColor: Colors.red[800],
+          ),
         );
       }
     } finally {
@@ -554,7 +584,27 @@ class _LoginScreenState extends State<LoginScreen> {
                         prefixIcon: Icons.lock_outline,
                         obscureText: true,
                       ),
-                      const SizedBox(height: 22),
+                      
+                      // Şifremi Unuttum (Sadece Giriş Modunda)
+                      if (_selectedTabIndex == 0)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: _isLoading ? null : _handleForgotPassword,
+                            child: const Text(
+                              "Şifremi Unuttum?",
+                              style: TextStyle(
+                                color: NeuColors.accentOrange,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        const SizedBox(height: 14),
+
+                      const SizedBox(height: 8),
 
                       // Giriş / Kayıt Butonu
                       NeuButton(
