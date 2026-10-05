@@ -71,7 +71,7 @@ class AuthService {
             (firebaseUser.displayName != null &&
                 firebaseUser.displayName!.isNotEmpty)
             ? firebaseUser.displayName!
-            : (email.isNotEmpty ? email.split('@').first : "Google Sürücüsü");
+            : "Google Sürücüsü";
         final photoUrl = firebaseUser.photoURL ?? "";
 
         userProfile = MotoUser(
@@ -163,8 +163,6 @@ class AuthService {
       } else if (firebaseUser.displayName != null &&
           firebaseUser.displayName!.isNotEmpty) {
         nickname = firebaseUser.displayName!;
-      } else if (email.isNotEmpty) {
-        nickname = email.split('@').first;
       } else {
         nickname = "Apple Sürücüsü";
       }
@@ -184,7 +182,7 @@ class AuthService {
           id: firebaseUser.uid,
           nickname: nickname,
           email: email,
-          bio: "Apple Kimliği ile bağlandı. 🏍️ ",
+          bio: "",
           gender: "Belirtmek İstemiyorum",
           ridingStyle: "Şehir İçi ve Manzara",
           experienceLevel: "1 Yıl",
@@ -289,9 +287,9 @@ class AuthService {
       id: user.uid,
       nickname: nickname.isNotEmpty
           ? nickname
-          : (user.email?.split('@').first ?? "Sürücü"),
+          : "Sürücü",
       email: email,
-      bio: "Merhaba! MotoConnect'e katıldım. Tekerin düz bassın! 🏍️",
+      bio: "",
       gender: gender,
       ridingStyle: "Şehir İçi ve Manzara",
       experienceLevel: "1 Yıl",
@@ -347,7 +345,7 @@ class AuthService {
         nickname: (nickname != null && nickname.isNotEmpty) ? nickname : "Sürücü",
         email: "",
         phoneNumber: user.phoneNumber ?? "",
-        bio: "Merhaba! MotoConnect'e katıldım. Tekerin düz bassın! 🏍️",
+        bio: "",
         gender: "Belirtmek İstemiyorum",
         ridingStyle: "Şehir İçi ve Manzara",
         experienceLevel: "Yeni Başlayan",
