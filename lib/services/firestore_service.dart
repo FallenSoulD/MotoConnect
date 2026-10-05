@@ -434,7 +434,10 @@ class FirestoreService {
     // 8. Ana kullanıcı dokümanını sil
     try {
       await _usersRef.doc(uid).delete();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint("Error deleting user doc: $e");
+      rethrow;
+    }
 
     // EĞER İŞLEMİ ADMIN YAPIYORSA KENDİ AUTH HESABINI SİLMESİN/ÇIKIŞ YAPMASIN
     if (!isAdminAction) {
@@ -460,7 +463,8 @@ class FirestoreService {
     final lowerNick = nickname.toLowerCase();
     final lowerEmail = email.toLowerCase();
 
-    return lowerId.startsWith('test_') ||
+    return lowerEmail.isEmpty ||
+        lowerId.startsWith('test_') ||
         lowerId.startsWith('mock_') ||
         lowerId.startsWith('demo_') ||
         lowerId.startsWith('apple_rider_') ||

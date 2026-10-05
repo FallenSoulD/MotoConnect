@@ -1000,7 +1000,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
           return const Center(child: Text("Sistemde hiç kullanıcı bulunmuyor.", style: TextStyle(color: Colors.white70)));
         }
 
-        final users = snapshot.data!.docs;
+        final users = snapshot.data!.docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>? ?? {};
+          final email = (data['email'] ?? '').toString().trim();
+          return email.isNotEmpty;
+        }).toList();
 
         return ListView.builder(
           padding: const EdgeInsets.all(16),
