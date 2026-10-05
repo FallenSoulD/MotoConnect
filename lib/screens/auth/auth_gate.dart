@@ -7,6 +7,7 @@ import '../../services/push_notification_service.dart';
 import '../../widgets/neumorphic_widgets.dart';
 import '../main_screen.dart';
 import 'login_screen.dart';
+import 'setup_profile_screen.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -91,19 +92,28 @@ class AuthGate extends StatelessWidget {
                     ),
                   );
                 }
+
+                // EĞER KULLANICI LAKABI VARSAYILAN İSE (GOOGLE/APPLE İLE GİRİŞ) LAKAP EKRANINA YÖNLENDİR
+                if (profile.nickname == "Sürücü" || 
+                    profile.nickname == "Google Sürücüsü" || 
+                    profile.nickname == "Apple Sürücüsü" || 
+                    profile.nickname.isEmpty) {
+                  return SetupProfileScreen(user: profile);
+                }
+
                 return MainScreen(aktifKullanici: profile);
               }
 
               // 2. Profil yüklenirken veya yeni hesapsa bekletmeden anında aç
               final nickname = (firebaseUser.displayName != null && firebaseUser.displayName!.isNotEmpty)
                   ? firebaseUser.displayName!
-                  : (firebaseUser.email?.split('@').first ?? "Sürücü");
+                  : "Sürücü";
 
               final initialUser = MotoUser(
                 id: firebaseUser.uid,
                 nickname: nickname,
                 email: firebaseUser.email ?? "",
-                bio: "Merhaba! MotoConnect'e katıldım. Tekerin düz bassın! 🏍️",
+                bio: "",
                 gender: "Belirtmek İstemiyorum",
                 ridingStyle: "Şehir İçi ve Manzara",
                 experienceLevel: "1 Yıl",
@@ -116,6 +126,10 @@ class AuthGate extends StatelessWidget {
                 ridingMotto: "Tekerin her zaman düz bassın!",
                 hobbies: ["☕ Gece Kahvesi", "🎧 Intercom Muhabbeti"],
               );
+
+              if (nickname == "Sürücü" || nickname == "Google Sürücüsü" || nickname == "Apple Sürücüsü" || nickname.isEmpty) {
+                return SetupProfileScreen(user: initialUser);
+              }
 
               return MainScreen(aktifKullanici: initialUser);
             },
