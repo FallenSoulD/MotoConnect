@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../models/user_model.dart';
 import '../../services/firestore_service.dart';
 import '../../services/storage_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../utils/profanity_filter.dart';
 import '../../widgets/moderation_sheets.dart';
 import '../../widgets/common_dialogs.dart';
@@ -574,6 +575,116 @@ class _GarageScreenState extends State<GarageScreen> {
     );
   }
 
+  void _showBugReportDialog() {
+    final TextEditingController reportController = TextEditingController();
+    bool isSubmitting = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setStateSB) {
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            child: NeuContainer(
+              padding: const EdgeInsets.all(22),
+              borderRadius: 22,
+              depth: 5,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.bug_report, color: Colors.redAccent, size: 22),
+                      SizedBox(width: 8),
+                      Text(
+                        "Hata / Bug Bildir",
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    "Uygulamada karşılaştığınız bir sorunu veya hatayı buradan bize bildirebilirsiniz.",
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: reportController,
+                    maxLines: 4,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText: "Sorunu detaylıca açıklayın...",
+                      hintStyle: const TextStyle(color: Colors.white30, fontSize: 12),
+                      filled: true,
+                      fillColor: Colors.black26,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: NeuButton(
+                          text: "Vazgeç",
+                          color: NeuColors.surfaceDark,
+                          textColor: Colors.white60,
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: NeuButton(
+                          text: isSubmitting ? "Gönder..." : "Gönder",
+                          isPrimary: true,
+                          onPressed: isSubmitting ? null : () async {
+                            final text = reportController.text.trim();
+                            if (text.isEmpty) return;
+                            
+                            setStateSB(() => isSubmitting = true);
+                            
+                            try {
+                              await FirebaseFirestore.instance.collection('reports').add({
+                                'reason': 'Sistem Hatası / Bug Bildirimi',
+                                'details': text,
+                                'reportedUserId': widget.aktifKullanici.id,
+                                'reportedNickname': widget.aktifKullanici.nickname,
+                                'status': 'pending',
+                                'isResolved': false,
+                                'createdAt': FieldValue.serverTimestamp(),
+                              });
+                              
+                              if (ctx.mounted) {
+                                Navigator.pop(ctx);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Hata bildirimi başarıyla gönderildi. Teşekkürler!"),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (ctx.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text("Hata: $e"), backgroundColor: Colors.red),
+                                );
+                                setStateSB(() => isSubmitting = false);
+                              }
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -601,6 +712,8 @@ class _GarageScreenState extends State<GarageScreen> {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => AdminPanelScreen(currentAdmin: widget.aktifKullanici)));
               } else if (value == 'safety') {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const SafetyCenterScreen()));
+              } else if (value == 'report_bug') {
+                _showBugReportDialog();
               } else if (value == 'privacy') {
                 ModerationSheets.showPrivacyPolicySheet(context);
               } else if (value == 'blocked') {
@@ -641,6 +754,16 @@ class _GarageScreenState extends State<GarageScreen> {
                     Icon(Icons.shield_outlined, color: Colors.blueAccent, size: 20),
                     SizedBox(width: 10),
                     Text("Güvenlik & Kurallar", style: TextStyle(color: Colors.white)),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'report_bug',
+                child: Row(
+                  children: [
+                    Icon(Icons.bug_report, color: Colors.redAccent, size: 20),
+                    SizedBox(width: 10),
+                    Text("Hata / Bug Bildir", style: TextStyle(color: Colors.white)),
                   ],
                 ),
               ),

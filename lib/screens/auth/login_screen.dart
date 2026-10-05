@@ -58,6 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (user != null) {
         _anaEkranaGec(user);
       } else {
+        if (!mounted) return;
         final ctx = navigatorKey.currentContext ?? context;
         ScaffoldMessenger.of(ctx).showSnackBar(
           const SnackBar(
@@ -67,6 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       final ctx = navigatorKey.currentContext ?? context;
       ScaffoldMessenger.of(ctx).showSnackBar(
         SnackBar(
@@ -106,6 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         msg = "Apple giriş hatası: ${e.message ?? e.code}";
       }
+      if (!mounted) return;
       final ctx = navigatorKey.currentContext ?? context;
       ScaffoldMessenger.of(ctx).showSnackBar(
         SnackBar(
@@ -117,6 +120,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       final errStr = e.toString();
       if (!errStr.contains("canceled") && !errStr.contains("iptal") && !errStr.contains("popup-closed-by-user")) {
+        if (!mounted) return;
         final ctx = navigatorKey.currentContext ?? context;
         ScaffoldMessenger.of(ctx).showSnackBar(
           SnackBar(
@@ -184,11 +188,13 @@ class _LoginScreenState extends State<LoginScreen> {
       if (e.code == 'email-already-in-use') msg = "Bu e-posta zaten kullanımda.";
       if (e.code == 'weak-password') msg = "Şifreniz en az 6 karakter olmalıdır.";
 
+      if (!mounted) return;
       final ctx = navigatorKey.currentContext ?? context;
       ScaffoldMessenger.of(ctx).showSnackBar(
         SnackBar(content: Text(msg), backgroundColor: Colors.red[800]),
       );
     } catch (e) {
+      if (!mounted) return;
       final ctx = navigatorKey.currentContext ?? context;
       ScaffoldMessenger.of(ctx).showSnackBar(
         SnackBar(content: Text("Hata oluştu: $e"), backgroundColor: Colors.red),
