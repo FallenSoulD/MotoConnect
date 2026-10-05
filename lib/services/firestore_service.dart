@@ -769,6 +769,9 @@ class FirestoreService {
         if (event.rider.id.isEmpty) {
           // Self-heal: Hatalı (boş ID'li) kayıtları temizle
           doc.reference.delete().catchError((_) {}); 
+        } else if (FirestoreService.isTestUser(event.rider.id, event.rider.nickname, event.rider.email)) {
+          // Self-heal: Bot/Klon kullanıcı kayıtlarını temizle ve gösterme
+          doc.reference.delete().catchError((_) {});
         } else {
           validList.add(event);
         }
