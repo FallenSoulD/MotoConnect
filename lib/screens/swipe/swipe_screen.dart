@@ -281,8 +281,22 @@ class _SwipeScreenState extends State<SwipeScreen> {
     if (karsilasilacakProfiller.isEmpty) return;
     final degerlendirilenKullanici = karsilasilacakProfiller[0];
 
+    // GÖRSEL BUG ÇÖZÜMÜ: Ağ isteği beklemeden önce kullanıcıyı listeden hemen çıkar, böylece kart ekranda takılı kalmaz.
+    setState(() {
+      karsilasilacakProfiller.removeAt(0);
+      _swipeCount++;
+      if (_swipeCount % 5 == 0) {
+        AdHelper.showInterstitialAd(widget.aktifKullanici);
+      }
+      if (_profileScrollController.hasClients) {
+        _profileScrollController.jumpTo(0);
+      }
+    });
+
     if (isSuperLike) {
       if (!widget.aktifKullanici.useSuperLike()) {
+        // Limit yetersizse geri al ve ödeme ekranı göster
+        setState(() { karsilasilacakProfiller.insert(0, degerlendirilenKullanici); });
         VipGarajEkrani.showPaywall(context, currentUser: widget.aktifKullanici);
         return;
       }
@@ -299,7 +313,10 @@ class _SwipeScreenState extends State<SwipeScreen> {
       
       _handleMatchResult(degerlendirilenKullanici, isMatch: isMatch, isSuperMatch: true);
     } else if (begenildiMi) {
-      if (!widget.aktifKullanici.useSwipeLike()) {
+      // Global Sınırsız Swipe Açık Değilse Limiti Kontrol Et
+      if (!ConfigService().config.isUnlimitedSwipeFree && !widget.aktifKullanici.useSwipeLike()) {
+        // Limit yetersizse geri al ve ödeme ekranı göster
+        setState(() { karsilasilacakProfiller.insert(0, degerlendirilenKullanici); });
         VipGarajEkrani.showPaywall(context, currentUser: widget.aktifKullanici);
         return;
       }
@@ -321,17 +338,6 @@ class _SwipeScreenState extends State<SwipeScreen> {
       widget.aktifKullanici.passUser(degerlendirilenKullanici.id);
       FirestoreService().passUser(widget.aktifKullanici.id, degerlendirilenKullanici.id);
     }
-
-    setState(() {
-      karsilasilacakProfiller.removeAt(0);
-      _swipeCount++;
-      if (_swipeCount % 5 == 0) {
-        AdHelper.showInterstitialAd(widget.aktifKullanici);
-      }
-      if (_profileScrollController.hasClients) {
-        _profileScrollController.jumpTo(0);
-      }
-    });
   }
 
   void _handleMatchResult(MotoUser degerlendirilenKullanici, {required bool isMatch, required bool isSuperMatch}) {
