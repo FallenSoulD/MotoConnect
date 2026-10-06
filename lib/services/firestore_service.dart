@@ -900,14 +900,14 @@ class FirestoreService {
 
   Stream<List<MotoSosAlert>> streamActiveSosAlerts() {
     return _sosRef
-        .where('isResolved', isEqualTo: false)
         .snapshots()
         .map((snapshot) {
-      final now = DateTime.now();
       final alerts = <MotoSosAlert>[];
       for (final doc in snapshot.docs) {
         final alert = MotoSosAlert.fromFirestore(doc);
-        alerts.add(alert);
+        if (!alert.isResolved) {
+          alerts.add(alert);
+        }
       }
       return alerts;
     }).handleError((error) {
@@ -924,8 +924,8 @@ class FirestoreService {
           .where('senderId', isEqualTo: senderId)
           .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
           .get();
-      // Günde en fazla 2 SOS gönderilebilir
-      return snapshot.docs.length < 2;
+      // Günde en fazla 100 SOS gönderilebilir (Test için artırıldı)
+      return snapshot.docs.length < 100;
     } catch (e) {
       debugPrint("canCreateSosAlert error: $e");
       // Index yoksa veya hata varsa varsayılan olarak izin veriyoruz
