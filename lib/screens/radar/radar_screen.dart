@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'dart:async';
+import 'dart:math';
 import 'package:geolocator/geolocator.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 import '../../models/user_model.dart';
 import '../../models/sos_model.dart';
 import '../../services/firestore_service.dart';
@@ -54,6 +56,14 @@ class _RadarScreenState extends State<RadarScreen> {
   double _rideDistanceKm = 0.0;
   final List<LatLng> _rideRoutePoints = [];
   StreamSubscription<double>? _sensorAngleSub;
+  StreamSubscription<UserAccelerometerEvent>? _userAccelSub;
+  
+  // Crash Detection State
+  bool _crashWarningActive = false;
+  int _crashCountdown = 15;
+  Timer? _crashTimer;
+  bool _highGForceDetected = false;
+  DateTime? _highGForceTime;
 
   @override
   void initState() {
@@ -76,6 +86,8 @@ class _RadarScreenState extends State<RadarScreen> {
       // Sürüşü bitir
       _rideTimer?.cancel();
       _sensorAngleSub?.cancel();
+      _userAccelSub?.cancel();
+      _cancelCrashWarning();
       setState(() {
         _isRideRecording = false;
       });
@@ -97,6 +109,7 @@ class _RadarScreenState extends State<RadarScreen> {
       
       _rideTimer = Timer.periodic(const Duration(seconds: 1), (_) {
         if (mounted) setState(() => _rideDurationSeconds++);
+        _evaluateCrashCondition();
       });
 
       _sensorAngleSub = SensorService().leanAngleStream.listen((angle) {
@@ -106,6 +119,82 @@ class _RadarScreenState extends State<RadarScreen> {
             _rideMaxLeanAngle = absAngle;
           }
         }
+      });
+      
+      _userAccelSub = userAccelerometerEventStream().listen((UserAccelerometerEvent event) {
+        if (!_isRideRecording || _crashWarningActive) return;
+        double gForce = sqrt(event.x * event.x + event.y * event.y + event.z * event.z);
+        if (gForce > 40.0) { // ~4G şok
+          _highGForceDetected = true;
+          _highGForceTime = DateTime.now();
+        }
+      });
+    }
+  }
+
+  void _evaluateCrashCondition() {
+    if (_crashWarningActive) return;
+    if (_highGForceDetected && _highGForceTime != null) {
+      final timeSinceGForce = DateTime.now().difference(_highGForceTime!);
+      if (timeSinceGForce.inSeconds > 3) {
+        // Şoktan 3 saniye sonra hız 5 km/h altındaysa KAZA varsayımı
+        if (_currentSpeedKmH < 5.0) {
+          _triggerCrashWarning();
+        } else {
+          _highGForceDetected = false;
+        }
+      }
+    }
+  }
+
+  void _triggerCrashWarning() {
+    setState(() {
+      _crashWarningActive = true;
+      _crashCountdown = 15;
+    });
+
+    _crashTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_crashCountdown > 0) {
+        if (mounted) setState(() => _crashCountdown--);
+      } else {
+        timer.cancel();
+        _sendSosAndStop();
+      }
+    });
+  }
+
+  Future<void> _sendSosAndStop() async {
+    final alert = MotoSosAlert(
+      id: "sos_${DateTime.now().millisecondsSinceEpoch}",
+      senderId: widget.aktifKullanici.id,
+      senderNickname: widget.aktifKullanici.nickname,
+      senderPhoto: widget.aktifKullanici.imageUrls.isNotEmpty ? widget.aktifKullanici.imageUrls.first : "",
+      senderPhone: "",
+      latitude: _benimKonumum.latitude,
+      longitude: _benimKonumum.longitude,
+      timestamp: DateTime.now(),
+      type: 'Kaza / Acil Destek',
+      description: "Otomatik kaza algılandı! Sürücü hareketsiz.",
+      locationName: "Bilinmeyen Konum",
+      isResolved: false,
+    );
+    await FirestoreService().createSosAlert(alert);
+    
+    if (mounted) {
+      _cancelCrashWarning();
+      if (_isRideRecording) _toggleRideRecording();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("🚨 SOS Alarmı Gönderildi!"), backgroundColor: Colors.redAccent),
+      );
+    }
+  }
+
+  void _cancelCrashWarning() {
+    _crashTimer?.cancel();
+    if (mounted) {
+      setState(() {
+        _crashWarningActive = false;
+        _highGForceDetected = false;
       });
     }
   }
@@ -370,6 +459,38 @@ class _RadarScreenState extends State<RadarScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_crashWarningActive) {
+      return Scaffold(
+        backgroundColor: Colors.red[900],
+        body: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 100),
+                const SizedBox(height: 20),
+                const Text("KAZA MI YAPTIN?", style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 10),
+                const Text("Sert bir sarsıntı algıladık.", style: TextStyle(color: Colors.white70, fontSize: 18)),
+                const SizedBox(height: 40),
+                Text("$_crashCountdown", style: const TextStyle(color: Colors.white, fontSize: 80, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 20),
+                const Text("Süre dolduğunda yakındaki herkese SOS gidecek!", style: TextStyle(color: Colors.white, fontSize: 14)),
+                const SizedBox(height: 60),
+                NeuButton(
+                  color: Colors.green,
+                  textColor: Colors.white,
+                  text: "İYİYİM (İPTAL ET)",
+                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+                  onPressed: _cancelCrashWarning,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return StreamBuilder<List<CrossedPathEvent>>(
       stream: FirestoreService().streamCrossedPaths(widget.aktifKullanici.id),
       builder: (context, snapshot) {
