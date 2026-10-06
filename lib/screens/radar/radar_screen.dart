@@ -11,6 +11,7 @@ import '../../widgets/moto_weather_bar.dart';
 import '../../services/weather_service.dart';
 import 'crossed_paths_screen.dart';
 import '../../models/crossed_path_model.dart';
+import '../../models/saved_route_model.dart';
 import 'sos_sheet.dart';
 import '../../widgets/neumorphic_widgets.dart';
 
@@ -50,6 +51,8 @@ class _RadarScreenState extends State<RadarScreen> {
   int _rideDurationSeconds = 0;
   double _rideTopSpeed = 0.0;
   double _rideMaxLeanAngle = 0.0;
+  double _rideDistanceKm = 0.0;
+  final List<LatLng> _rideRoutePoints = [];
   StreamSubscription<double>? _sensorAngleSub;
 
   @override
@@ -85,6 +88,11 @@ class _RadarScreenState extends State<RadarScreen> {
         _rideDurationSeconds = 0;
         _rideTopSpeed = _currentSpeedKmH; // Mevcut hızdan başla
         _rideMaxLeanAngle = 0.0;
+        _rideDistanceKm = 0.0;
+        _rideRoutePoints.clear();
+        if (_benimKonumum.latitude != 0 && _benimKonumum.longitude != 0) {
+          _rideRoutePoints.add(_benimKonumum);
+        }
       });
       
       _rideTimer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -103,28 +111,75 @@ class _RadarScreenState extends State<RadarScreen> {
   }
 
   void _showRideSummaryDialog() {
+    final nameController = TextEditingController();
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: NeuColors.surfaceDark,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text("🏁 Sürüş Tamamlandı", style: TextStyle(color: Colors.white)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text("Süre: ${_rideDurationSeconds ~/ 60} dk ${_rideDurationSeconds % 60} sn", style: const TextStyle(color: Colors.white70)),
-            const SizedBox(height: 10),
-            Text("Maks Hız: ${_rideTopSpeed.toStringAsFixed(0)} km/s", style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 18)),
-            const SizedBox(height: 10),
-            Text("Maks Yatış: ${_rideMaxLeanAngle.toStringAsFixed(1)}°", style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold, fontSize: 18)),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("KAPAT", style: TextStyle(color: NeuColors.accentOrange)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text("Süre: ${_rideDurationSeconds ~/ 60} dk ${_rideDurationSeconds % 60} sn", style: const TextStyle(color: Colors.white70)),
+              const SizedBox(height: 10),
+              Text("Mesafe: ${_rideDistanceKm.toStringAsFixed(2)} km", style: const TextStyle(color: Colors.white70)),
+              const SizedBox(height: 10),
+              Text("Maks Hız: ${_rideTopSpeed.toStringAsFixed(0)} km/s", style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 18)),
+              const SizedBox(height: 10),
+              Text("Maks Yatış: ${_rideMaxLeanAngle.toStringAsFixed(1)}°", style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold, fontSize: 18)),
+              const SizedBox(height: 20),
+              NeuTextField(
+                controller: nameController,
+                hintText: "Örn: Sahil Turu",
+                prefixIcon: Icons.route,
+              ),
+              const SizedBox(height: 16),
+              NeuButton(
+                text: "Kaydet ve Çık",
+                isPrimary: true,
+                onPressed: () async {
+                  if (_rideRoutePoints.isNotEmpty) {
+                    final route = SavedRoute(
+                      id: "route_${DateTime.now().millisecondsSinceEpoch}",
+                      userId: widget.aktifKullanici.id,
+                      routeName: nameController.text.trim().isEmpty ? "İsimsiz Sürüş" : nameController.text.trim(),
+                      waypoints: _rideRoutePoints,
+                      distanceKm: _rideDistanceKm,
+                      duration: Duration(seconds: _rideDurationSeconds),
+                      maxLeanAngle: _rideMaxLeanAngle,
+                      maxSpeedKmh: _rideTopSpeed,
+                      createdAt: DateTime.now(),
+                    );
+                    await FirestoreService().saveRoute(route);
+                    if (ctx.mounted) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        const SnackBar(content: Text("Sürüş başarıyla kaydedildi!"), backgroundColor: Colors.green),
+                      );
+                    }
+                  } else {
+                    if (ctx.mounted) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        const SnackBar(content: Text("Yeterli mesafe katedilmediği için kaydedilemedi."), backgroundColor: Colors.orange),
+                      );
+                    }
+                  }
+                  if (ctx.mounted) Navigator.pop(ctx);
+                },
+              ),
+              const SizedBox(height: 12),
+              NeuButton(
+                text: "Kaydetmeden Çık",
+                color: NeuColors.surfaceDark,
+                textColor: Colors.redAccent,
+                onPressed: () => Navigator.pop(ctx),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -192,8 +247,21 @@ class _RadarScreenState extends State<RadarScreen> {
     final double speedKmH = (position.speed * 3.6).clamp(0.0, 300.0);
     setState(() {
       _currentSpeedKmH = speedKmH;
-      if (_isRideRecording && speedKmH > _rideTopSpeed) {
-        _rideTopSpeed = speedKmH;
+      if (_isRideRecording) {
+        if (speedKmH > _rideTopSpeed) {
+          _rideTopSpeed = speedKmH;
+        }
+        final newPoint = LatLng(position.latitude, position.longitude);
+        if (_rideRoutePoints.isNotEmpty) {
+          final dist = Geolocator.distanceBetween(
+            _rideRoutePoints.last.latitude,
+            _rideRoutePoints.last.longitude,
+            newPoint.latitude,
+            newPoint.longitude,
+          );
+          _rideDistanceKm += (dist / 1000.0);
+        }
+        _rideRoutePoints.add(newPoint);
       }
       _benimKonumum = LatLng(position.latitude, position.longitude);
       widget.aktifKullanici.latitude = position.latitude;
