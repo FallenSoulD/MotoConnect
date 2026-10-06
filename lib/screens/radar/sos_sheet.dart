@@ -137,12 +137,11 @@ class SosSheet {
                       prefixIcon: Icons.description_outlined,
                     ),
                     const SizedBox(height: 22),
-                    NeuButton(
-                      text: "SOS SİNYALİNİ HARİTADA YAYINLA",
-                      icon: Icons.crisis_alert,
-                      color: Colors.red[900],
-                      textColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red[900],
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
                       onPressed: () async {
                         final canCreate = await FirestoreService().canCreateSosAlert(currentUser.id);
                         if (!canCreate) {
@@ -196,6 +195,17 @@ class SosSheet {
                           ),
                         );
                       },
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.crisis_alert, color: Colors.white),
+                          SizedBox(width: 8),
+                          Text(
+                            "SOS SİNYALİNİ HARİTADA YAYINLA",
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
