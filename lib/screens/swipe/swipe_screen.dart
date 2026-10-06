@@ -348,14 +348,6 @@ class _SwipeScreenState extends State<SwipeScreen> {
 
     if (isMatch || isSuperMatch) {
       _eslesmeEkraniGoster(degerlendirilenKullanici, isSuperMatch: isSuperMatch);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("${degerlendirilenKullanici.nickname}'e selektör çakıldı! Karşılık verirse eşleşeceksiniz ⚡"),
-          backgroundColor: const Color(0xFF2C1A0E),
-          duration: const Duration(seconds: 2),
-        ),
-      );
     }
   }
 
