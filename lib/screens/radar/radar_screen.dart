@@ -815,38 +815,16 @@ class _RadarScreenState extends State<RadarScreen> {
                   Positioned(
                     bottom: 24,
                     left: 16,
-                    child: GestureDetector(
-                      onTap: () => SosSheet.showCreateSos(context, currentUser: widget.aktifKullanici),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEF4444),
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFEF4444).withValues(alpha: 0.35),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.crisis_alert, color: Colors.white, size: 20),
-                            SizedBox(width: 8),
-                            Text(
-                              "S.O.S. ÇAĞRISI",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 12.5,
-                                letterSpacing: 0.8,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                    child: NeuButton(
+                      text: "S.O.S. ÇAĞRISI",
+                      icon: Icons.crisis_alert,
+                      color: const Color(0xFFEF4444),
+                      textColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                      borderRadius: 16,
+                      onPressed: () {
+                        SosSheet.showCreateSos(context, currentUser: widget.aktifKullanici);
+                      },
                     ),
                   ),
 

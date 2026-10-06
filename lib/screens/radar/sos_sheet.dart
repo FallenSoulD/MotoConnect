@@ -24,6 +24,7 @@ class SosSheet {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      useRootNavigator: true,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
