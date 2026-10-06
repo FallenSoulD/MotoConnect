@@ -143,18 +143,6 @@ class SosSheet {
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
                       onPressed: () async {
-                        final canCreate = await FirestoreService().canCreateSosAlert(currentUser.id);
-                        if (!canCreate) {
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Günlük S.O.S. gönderme limitinizi doldurdunuz (Maks: 2/gün)."),
-                              backgroundColor: Colors.redAccent,
-                            ),
-                          );
-                          return;
-                        }
-
                         final alert = MotoSosAlert(
                           id: 'sos_${DateTime.now().millisecondsSinceEpoch}',
                           senderId: currentUser.id,
