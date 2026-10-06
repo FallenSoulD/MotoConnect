@@ -281,13 +281,14 @@ class _SwipeScreenState extends State<SwipeScreen> {
   void _profilDegerlendir(bool begenildiMi, {bool isSuperLike = false}) async {
     if (karsilasilacakProfiller.isEmpty) return;
     final degerlendirilenKullanici = karsilasilacakProfiller[0];
+    final currentUser = widget.aktifKullanici;
 
     // GÖRSEL BUG ÇÖZÜMÜ: Ağ isteği beklemeden önce kullanıcıyı listeden hemen çıkar, böylece kart ekranda takılı kalmaz.
     setState(() {
       karsilasilacakProfiller.removeAt(0);
       _swipeCount++;
       if (_swipeCount % 5 == 0) {
-        AdHelper.showInterstitialAd(widget.aktifKullanici);
+        AdHelper.showInterstitialAd(currentUser);
       }
       if (_profileScrollController.hasClients) {
         _profileScrollController.jumpTo(0);
@@ -295,50 +296,50 @@ class _SwipeScreenState extends State<SwipeScreen> {
     });
 
     if (isSuperLike) {
-      if (!widget.aktifKullanici.useSuperLike()) {
+      if (!currentUser.useSuperLike()) {
         // Limit yetersizse geri al ve ödeme ekranı göster
         setState(() { karsilasilacakProfiller.insert(0, degerlendirilenKullanici); });
-        VipGarajEkrani.showPaywall(context, currentUser: widget.aktifKullanici);
+        VipGarajEkrani.showPaywall(context, currentUser: currentUser);
         return;
       }
-      widget.aktifKullanici.likeUser(degerlendirilenKullanici.id);
+      currentUser.likeUser(degerlendirilenKullanici.id);
       bool isMatch = await FirestoreService().sendSuperSignal(
-        currentUser: widget.aktifKullanici,
+        currentUser: currentUser,
         toUser: degerlendirilenKullanici,
       );
       FirestoreService().updateLikes(
-        widget.aktifKullanici.id,
-        superLikes: widget.aktifKullanici.superLikesLeft,
-        lastLimitsResetAt: widget.aktifKullanici.lastLimitsResetAt,
+        currentUser.id,
+        superLikes: currentUser.superLikesLeft,
+        lastLimitsResetAt: currentUser.lastLimitsResetAt,
       );
       
       _handleMatchResult(degerlendirilenKullanici, isMatch: isMatch, isSuperMatch: true);
     } else if (begenildiMi) {
       // Global Sınırsız Swipe Açık Değilse Limiti Kontrol Et
       final config = await ConfigService().getConfigOnce();
-      if (!config.isUnlimitedSwipeFree && !widget.aktifKullanici.useSwipeLike()) {
+      if (!config.isUnlimitedSwipeFree && !currentUser.useSwipeLike()) {
         // Limit yetersizse geri al ve ödeme ekranı göster
         setState(() { karsilasilacakProfiller.insert(0, degerlendirilenKullanici); });
-        VipGarajEkrani.showPaywall(context, currentUser: widget.aktifKullanici);
+        VipGarajEkrani.showPaywall(context, currentUser: currentUser);
         return;
       }
-      widget.aktifKullanici.likeUser(degerlendirilenKullanici.id);
+      currentUser.likeUser(degerlendirilenKullanici.id);
       bool isMatch = await FirestoreService().sendRadarSignal(
-        currentUser: widget.aktifKullanici,
+        currentUser: currentUser,
         toUser: degerlendirilenKullanici,
       );
 
       FirestoreService().updateLikes(
-        widget.aktifKullanici.id,
-        swipeLikes: widget.aktifKullanici.swipeLikesLeft,
-        lastLimitsResetAt: widget.aktifKullanici.lastLimitsResetAt,
+        currentUser.id,
+        swipeLikes: currentUser.swipeLikesLeft,
+        lastLimitsResetAt: currentUser.lastLimitsResetAt,
       );
 
       _handleMatchResult(degerlendirilenKullanici, isMatch: isMatch, isSuperMatch: false);
     } else {
       // REDDETTİ (Pas Geçti)
-      widget.aktifKullanici.passUser(degerlendirilenKullanici.id);
-      FirestoreService().passUser(widget.aktifKullanici.id, degerlendirilenKullanici.id);
+      currentUser.passUser(degerlendirilenKullanici.id);
+      FirestoreService().passUser(currentUser.id, degerlendirilenKullanici.id);
     }
   }
 
