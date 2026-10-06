@@ -7,6 +7,7 @@ import '../chat/chat_screen.dart';
 import '../garage/vip_garage_screen.dart';
 import '../../widgets/neumorphic_widgets.dart';
 import '../../services/ad_helper.dart';
+import '../../services/config_service.dart';
 
 class SwipeScreen extends StatefulWidget {
   final MotoUser aktifKullanici;
@@ -314,7 +315,8 @@ class _SwipeScreenState extends State<SwipeScreen> {
       _handleMatchResult(degerlendirilenKullanici, isMatch: isMatch, isSuperMatch: true);
     } else if (begenildiMi) {
       // Global Sınırsız Swipe Açık Değilse Limiti Kontrol Et
-      if (!ConfigService().config.isUnlimitedSwipeFree && !widget.aktifKullanici.useSwipeLike()) {
+      final config = await ConfigService().getConfigOnce();
+      if (!config.isUnlimitedSwipeFree && !widget.aktifKullanici.useSwipeLike()) {
         // Limit yetersizse geri al ve ödeme ekranı göster
         setState(() { karsilasilacakProfiller.insert(0, degerlendirilenKullanici); });
         VipGarajEkrani.showPaywall(context, currentUser: widget.aktifKullanici);
