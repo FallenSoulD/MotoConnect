@@ -276,7 +276,7 @@ class _VipGarajEkraniState extends State<VipGarajEkrani> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      sub.id == "vip_monthly_v1" ? config.vipMonthlyPrice : config.vipYearlyPrice,
+                      sub.id == "vip_monthly_v2" || sub.id == "vip_monthly_v1" ? config.vipMonthlyPrice : config.vipYearlyPrice,
                       style: const TextStyle(
                         color: Colors.white70,
                         fontWeight: FontWeight.bold,
