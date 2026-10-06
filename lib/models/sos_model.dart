@@ -58,7 +58,7 @@ class MotoSosAlert {
       'latitude': latitude,
       'longitude': longitude,
       'locationName': locationName,
-      'timestamp': Timestamp.fromDate(timestamp),
+      'timestamp': FieldValue.serverTimestamp(),
       'isResolved': isResolved,
     };
   }

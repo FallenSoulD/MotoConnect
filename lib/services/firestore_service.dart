@@ -907,14 +907,13 @@ class FirestoreService {
       final alerts = <MotoSosAlert>[];
       for (final doc in snapshot.docs) {
         final alert = MotoSosAlert.fromFirestore(doc);
-        if (now.difference(alert.timestamp).inMinutes >= 15) {
-          doc.reference.delete();
-        } else {
-          alerts.add(alert);
-        }
+        alerts.add(alert);
       }
       return alerts;
-    }).handleError((_) => <MotoSosAlert>[]);
+    }).handleError((error) {
+      debugPrint("streamActiveSosAlerts error: $error");
+      return <MotoSosAlert>[];
+    });
   }
 
   Future<bool> canCreateSosAlert(String senderId) async {
@@ -937,7 +936,9 @@ class FirestoreService {
   Future<void> createSosAlert(MotoSosAlert sos) async {
     try {
       await _sosRef.doc(sos.id).set(sos.toMap());
-    } catch (_) {}
+    } catch (e) {
+      debugPrint("createSosAlert error: $e");
+    }
   }
 
   Future<void> resolveSosAlert(String sosId) async {

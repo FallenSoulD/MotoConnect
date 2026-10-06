@@ -173,10 +173,11 @@ class SosSheet {
                         );
 
                         if (!context.mounted) return;
+                        final messenger = ScaffoldMessenger.of(context);
                         Navigator.pop(context);
                         FirestoreService().createSosAlert(alert);
 
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        messenger.showSnackBar(
                           const SnackBar(
                             content: Row(
                               children: [
