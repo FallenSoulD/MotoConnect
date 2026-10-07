@@ -159,29 +159,38 @@ class SosSheet {
                           timestamp: DateTime.now(),
                         );
 
+                        // Use the originalContext instead of the bottom sheet's context
                         if (!context.mounted) return;
-                        final messenger = ScaffoldMessenger.of(context);
+                        
+                        // Kapat
                         Navigator.pop(context);
+                        
+                        // Kaydet
                         FirestoreService().createSosAlert(alert);
 
-                        messenger.showSnackBar(
-                          const SnackBar(
-                            content: Row(
-                              children: [
-                                Icon(Icons.crisis_alert, color: Colors.white),
-                                SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    "🚨 S.O.S. Talebiniz Başarıyla Oluşturuldu! Çevredeki motorculara iletildi.",
-                                    style: TextStyle(fontWeight: FontWeight.bold),
+                        // Bildirimi göster (hata olursa çökmesin diye try-catch)
+                        try {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Row(
+                                children: [
+                                  Icon(Icons.crisis_alert, color: Colors.white),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      "🚨 S.O.S. Talebiniz Başarıyla Oluşturuldu! Çevredeki motorculara iletildi.",
+                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
+                              backgroundColor: Colors.redAccent,
+                              duration: Duration(seconds: 4),
                             ),
-                            backgroundColor: Colors.redAccent,
-                            duration: Duration(seconds: 4),
-                          ),
-                        );
+                          );
+                        } catch (e) {
+                          debugPrint("SnackBar error: $e");
+                        }
                       },
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
