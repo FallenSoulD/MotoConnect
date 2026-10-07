@@ -933,11 +933,13 @@ class FirestoreService {
     }
   }
 
-  Future<void> createSosAlert(MotoSosAlert sos) async {
+  Future<String?> createSosAlert(MotoSosAlert sos) async {
     try {
       await _sosRef.doc(sos.id).set(sos.toMap());
+      return null; // Başarılı
     } catch (e) {
       debugPrint("createSosAlert error: $e");
+      return e.toString();
     }
   }
 

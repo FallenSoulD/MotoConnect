@@ -16,12 +16,12 @@ class SosSheet {
   ];
 
   /// Yeni SOS Acil Durum Sinyali Başlatma Penceresi
-  static void showCreateSos(BuildContext context, {required MotoUser currentUser}) {
+  static void showCreateSos(BuildContext originalContext, {required MotoUser currentUser}) {
     String selectedType = 'Akü Bitti / Takviye';
     final descController = TextEditingController();
 
     showModalBottomSheet(
-      context: context,
+      context: originalContext,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       useRootNavigator: true,
@@ -162,32 +162,44 @@ class SosSheet {
                         // Use the originalContext instead of the bottom sheet's context
                         if (!context.mounted) return;
                         
+                        // Kaydet ve Hata Kontrolü Yap
+                        final error = await FirestoreService().createSosAlert(alert);
+
                         // Kapat
-                        Navigator.pop(context);
-                        
-                        // Kaydet
-                        FirestoreService().createSosAlert(alert);
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                        }
 
                         // Bildirimi göster (hata olursa çökmesin diye try-catch)
                         try {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Row(
-                                children: [
-                                  Icon(Icons.crisis_alert, color: Colors.white),
-                                  SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      "🚨 S.O.S. Talebiniz Başarıyla Oluşturuldu! Çevredeki motorculara iletildi.",
-                                      style: TextStyle(fontWeight: FontWeight.bold),
-                                    ),
-                                  ),
-                                ],
+                          if (error != null) {
+                            ScaffoldMessenger.of(originalContext).showSnackBar(
+                              SnackBar(
+                                content: Text("S.O.S. Oluşturulamadı: $error"),
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 6),
                               ),
-                              backgroundColor: Colors.redAccent,
-                              duration: Duration(seconds: 4),
-                            ),
-                          );
+                            );
+                          } else {
+                            ScaffoldMessenger.of(originalContext).showSnackBar(
+                              const SnackBar(
+                                content: Row(
+                                  children: [
+                                    Icon(Icons.crisis_alert, color: Colors.white),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        "🚨 S.O.S. Talebiniz Başarıyla Oluşturuldu! Çevredeki motorculara iletildi.",
+                                        style: TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                backgroundColor: Colors.green, // changed to green to distinguish new version
+                                duration: Duration(seconds: 4),
+                              ),
+                            );
+                          }
                         } catch (e) {
                           debugPrint("SnackBar error: $e");
                         }
