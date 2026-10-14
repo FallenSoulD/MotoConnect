@@ -793,9 +793,53 @@ class FirestoreService {
     double? longitude,
   }) async {
     try {
+      final docId = "${currentUserId}_${otherUser.id}";
+      final docRef = _crossedPathsRef.doc(docId);
+      final docSnap = await docRef.get();
+
+      if (docSnap.exists) {
+        // HAPPN SİSTEMİ: İLK KARŞILAŞILAN NOKTA KESİNLİKLE SABİTTİR!
+        // Asla kullanıcının veya sürücünün sonraki anlık konumuna taşınmaz.
+        // Sadece karşılaşma sayısını (crossCount) artır ve son karşılaşma zamanını güncelle.
+        await docRef.update({
+          'crossCount': FieldValue.increment(1),
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+          'distanceKm': distanceKm,
+          'rider': otherUser.toMap(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+        return;
+      }
+
+      // Eski safeLocation içeren docId formatı varsa onu da kontrol et ve migrate et
       final safeLocation = locationName.replaceAll(' ', '_');
-      final docId = "${currentUserId}_${otherUser.id}_$safeLocation";
-      await _crossedPathsRef.doc(docId).set({
+      final oldDocRef = _crossedPathsRef.doc("${currentUserId}_${otherUser.id}_$safeLocation");
+      final oldDocSnap = await oldDocRef.get();
+      if (oldDocSnap.exists) {
+        final oldData = oldDocSnap.data() as Map<String, dynamic>? ?? {};
+        final existingLat = (oldData['latitude'] as num?)?.toDouble() ?? latitude;
+        final existingLng = (oldData['longitude'] as num?)?.toDouble() ?? longitude;
+        final existingCount = (oldData['crossCount'] as num?)?.toInt() ?? 1;
+
+        await docRef.set({
+          ...oldData,
+          'userId': currentUserId,
+          'riderId': otherUser.id,
+          'rider': otherUser.toMap(),
+          'locationName': locationName,
+          'distanceKm': distanceKm,
+          'latitude': existingLat, // Eski sabit koordinatı koru
+          'longitude': existingLng,
+          'crossCount': existingCount + 1,
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+        await oldDocRef.delete().catchError((_) {});
+        return;
+      }
+
+      // İLK KEZ KARŞILAŞMA: İlk denk gelinen koordinatları kaydet ve haritada kalıcı sabitle
+      await docRef.set({
         'userId': currentUserId,
         'riderId': otherUser.id,
         'rider': otherUser.toMap(),
@@ -803,10 +847,11 @@ class FirestoreService {
         'distanceKm': distanceKm,
         'latitude': latitude,
         'longitude': longitude,
-        'crossCount': FieldValue.increment(1),
+        'crossCount': 1,
         'timestamp': DateTime.now().millisecondsSinceEpoch,
+        'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      });
     } catch (e) {
       debugPrint("recordCrossedPath error: $e");
     }

@@ -404,22 +404,24 @@ class _RadarScreenState extends State<RadarScreen> {
         );
 
         if (dist <= 1000.0) { // 1 KM Yarıçap
+          // HAPPN SİSTEMİ: Karşı tarafın bulunduğu fiziksel konumu (rider.latitude/longitude) kaydediyoruz.
+          // Kendi üzerimize gelmemesi ve ilk denk gelinen yerde sabit kalması için karşı tarafın koordinatları sabitlenir.
           await FirestoreService().recordCrossedPath(
             currentUserId: widget.aktifKullanici.id,
             otherUser: rider,
             locationName: widget.aktifKullanici.locationName.isNotEmpty ? widget.aktifKullanici.locationName : "Yakınından Geçti",
             distanceKm: dist / 1000.0,
-            latitude: _benimKonumum.latitude,
-            longitude: _benimKonumum.longitude,
+            latitude: rider.latitude!,
+            longitude: rider.longitude!,
           );
-          // Karşı tarafın swipe ekranına da düşmek için karşı taraf için de kaydedelim
+          // Karşı tarafın swipe/radar ekranına da düşmek için karşı taraf için de kaydedelim
           await FirestoreService().recordCrossedPath(
             currentUserId: rider.id,
             otherUser: widget.aktifKullanici,
             locationName: rider.locationName.isNotEmpty ? rider.locationName : "Yakınından Geçti",
             distanceKm: dist / 1000.0,
-            latitude: rider.latitude!,
-            longitude: rider.longitude!,
+            latitude: _benimKonumum.latitude,
+            longitude: _benimKonumum.longitude,
           );
           
           _recordedCrossedPaths.add(rider.id);
@@ -431,6 +433,24 @@ class _RadarScreenState extends State<RadarScreen> {
     }
   }
 
+
+  Widget _buildClusterFallback(int count) {
+    return Container(
+      color: NeuColors.surfaceDark,
+      child: Center(
+        child: count > 1
+            ? Text(
+                "$count",
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                ),
+              )
+            : const Icon(Icons.person, color: NeuColors.accentOrange, size: 24),
+      ),
+    );
+  }
 
   Widget _buildSosMarker(MotoSosAlert sos) {
     return GestureDetector(
@@ -496,6 +516,13 @@ class _RadarScreenState extends State<RadarScreen> {
       builder: (context, snapshot) {
         final allCrossedPaths = snapshot.data ?? [];
 
+        // Karşılaşılanları oturum hafızasına al ki gereksiz tekrar kayıt tetiklenmesin
+        for (var cp in allCrossedPaths) {
+          if (cp.rider.id.isNotEmpty) {
+            _recordedCrossedPaths.add(cp.rider.id);
+          }
+        }
+
         // 1. Engellenenleri Filtrele (Mesafe kısıtlaması kaldırıldı, tüm karşılaşılanlar görünür)
         final radardakiMotorcular = allCrossedPaths.where((event) {
           if (widget.aktifKullanici.isUserBlocked(event.rider.id)) return false;
@@ -545,16 +572,16 @@ class _RadarScreenState extends State<RadarScreen> {
               ),
             );
 
-            // 2. Çevredeki Filtrelenmiş Denk Gelişler (Grid / Modular Bölgesel Kümeleme)
+            // 2. Çevredeki Filtrelenmiş Denk Gelişler (Happn Tarzı Sabit Harita Pinleri)
             final Map<String, List<CrossedPathEvent>> groupedPaths = {};
             for (var event in radardakiMotorcular) {
-              final lat = event.latitude ?? event.rider.latLng.latitude;
-              final lng = event.longitude ?? event.rider.latLng.longitude;
+              final lat = event.latitude ?? event.rider.latitude ?? event.rider.latLng.latitude;
+              final lng = event.longitude ?? event.rider.longitude ?? event.rider.latLng.longitude;
               
-              // 0.015 hassasiyet yaklaşık 1.5 - 2 km'lik grid'ler (bölgeler) oluşturur
-              final latKey = (lat / 0.015).round() * 0.015;
-              final lngKey = (lng / 0.015).round() * 0.015;
-              final key = "${latKey.toStringAsFixed(3)}_${lngKey.toStringAsFixed(3)}";
+              // 0.003 hassasiyet (~250-300 metre). Aynı cadde/noktada karşılaşılanları kümele, farklı caddeleri ayrı tut.
+              final latKey = (lat / 0.003).round() * 0.003;
+              final lngKey = (lng / 0.003).round() * 0.003;
+              final key = "${latKey.toStringAsFixed(4)}_${lngKey.toStringAsFixed(4)}";
 
               if (!groupedPaths.containsKey(key)) {
                 groupedPaths[key] = [];
@@ -566,15 +593,26 @@ class _RadarScreenState extends State<RadarScreen> {
               final count = entry.value.length; 
               final firstEvent = entry.value.first;
               
-              final clusterLat = firstEvent.latitude ?? firstEvent.rider.latLng.latitude;
-              final clusterLng = firstEvent.longitude ?? firstEvent.rider.latLng.longitude;
+              double clusterLat = firstEvent.latitude ?? firstEvent.rider.latitude ?? firstEvent.rider.latLng.latitude;
+              double clusterLng = firstEvent.longitude ?? firstEvent.rider.longitude ?? firstEvent.rider.latLng.longitude;
+
+              // Eğer marker kullanıcının kendi tam üzerine denk geliyorsa (< 35 metre),
+              // motosiklet ikonunu örtmemesi için hafif doğal bir ofset verelim
+              final distToMe = Geolocator.distanceBetween(_benimKonumum.latitude, _benimKonumum.longitude, clusterLat, clusterLng);
+              if (distToMe < 35.0) {
+                final angle = (firstEvent.rider.id.hashCode.abs() % 360) * 0.0174533;
+                clusterLat += 0.00035 * (angle > 3.14 ? 1 : -1);
+                clusterLng += 0.00035 * (angle % 2 == 0 ? 1 : -1);
+              }
+
               final clusterPoint = LatLng(clusterLat, clusterLng);
+              final riderPhoto = firstEvent.rider.imageUrls.isNotEmpty ? firstEvent.rider.imageUrls.first : null;
 
               markerListesi.add(
                 Marker(
                   point: clusterPoint, 
-                  width: 50,
-                  height: 50,
+                  width: 52,
+                  height: 52,
                   child: GestureDetector(
                     onTap: () {
                       Navigator.push(
@@ -591,26 +629,51 @@ class _RadarScreenState extends State<RadarScreen> {
                       color: NeuColors.accentOrange,
                       child: Container(
                         decoration: BoxDecoration(
-                          color: NeuColors.surfaceDark,
                           shape: BoxShape.circle,
+                          color: NeuColors.surfaceDark,
                           border: Border.all(color: NeuColors.accentOrange, width: 2.5),
                           boxShadow: [
                             BoxShadow(
-                              color: NeuColors.accentOrange.withValues(alpha: 0.4),
+                              color: NeuColors.accentOrange.withValues(alpha: 0.45),
                               blurRadius: 8,
                               spreadRadius: 2,
                             )
                           ],
                         ),
-                        child: Center(
-                          child: Text(
-                            "$count",
-                            style: const TextStyle(
-                              color: Colors.white, 
-                              fontWeight: FontWeight.w900, 
-                              fontSize: 18,
-                            ),
-                          ),
+                        child: ClipOval(
+                          child: riderPhoto != null && riderPhoto.isNotEmpty
+                              ? Stack(
+                                  children: [
+                                    Image.network(
+                                      riderPhoto,
+                                      fit: BoxFit.cover,
+                                      width: 52,
+                                      height: 52,
+                                      errorBuilder: (ctx, err, stack) => _buildClusterFallback(count),
+                                    ),
+                                    if (count > 1)
+                                      Positioned(
+                                        right: 0,
+                                        bottom: 0,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                          decoration: BoxDecoration(
+                                            color: NeuColors.accentOrange,
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            "+$count",
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 9.5,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                )
+                              : _buildClusterFallback(count),
                         ),
                       ),
                     ),

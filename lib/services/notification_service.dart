@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
+import 'push_notification_service.dart';
 
 enum NotificationType { signal, superSignal, message, ride, lobby, sos }
 
@@ -45,8 +46,10 @@ class NotificationService {
   StreamSubscription? _sosSubscription;
 
   final Set<String> _processedMessageKeys = {};
-  DateTime _serviceStartTime = DateTime.now();
   String? _listeningUserId;
+
+  /// Kullanıcının şu an açık tuttuğu sohbet odası ID'si (Bu sohbet açıkken o odadan gelen mesajlar için bildirim basılmaz)
+  String? activeChatRoomId;
 
   /// Kullanıcı oturum açtığında tüm gelen DM, Selektör ve SOS akışını gerçek zamanlı dinlemeye başlar
   void startListening(MotoUser currentUser) {
@@ -54,36 +57,47 @@ class NotificationService {
     stopListening();
 
     _listeningUserId = currentUser.id;
-    _serviceStartTime = DateTime.now().subtract(const Duration(seconds: 3));
 
     // 1. GELEN DM / SOHBET MESAJLARINI DİNLE
+    bool isInitialChatSnapshot = true;
+    final Map<String, String> lastKnownChatMessages = {};
+
     _chatSubscription = FirebaseFirestore.instance
         .collection('chats')
         .where('participants', arrayContains: currentUser.id)
         .snapshots()
         .listen((snapshot) {
+      if (isInitialChatSnapshot) {
+        // İlk açılışta mevcut sohbetlerin son mesaj imzasını hafızaya al (eski mesajları bildirim yapma)
+        for (final doc in snapshot.docs) {
+          final data = doc.data();
+          final lastSender = data['lastSenderId'] ?? data['lastMessageSenderId'];
+          final lastMsg = data['lastMessage'] as String? ?? '';
+          final lastTime = data['lastMessageTime']?.toString() ?? '';
+          lastKnownChatMessages[doc.id] = "${lastSender}_${lastMsg}_$lastTime";
+        }
+        isInitialChatSnapshot = false;
+        return;
+      }
+
       for (final change in snapshot.docChanges) {
         final data = change.doc.data();
         if (data == null) continue;
 
         final lastSenderId = data['lastSenderId'] ?? data['lastMessageSenderId'];
         final lastMessage = data['lastMessage'] as String? ?? '';
-        final lastMessageTime = data['lastMessageTime'];
+        final lastTime = data['lastMessageTime']?.toString() ?? '';
 
         if (lastSenderId == null || lastSenderId == currentUser.id) continue;
         if (lastMessage.isEmpty) continue;
 
-        DateTime messageDate = DateTime.now();
-        if (lastMessageTime is Timestamp) {
-          messageDate = lastMessageTime.toDate();
-        }
+        final currentKey = "${lastSenderId}_${lastMessage}_$lastTime";
+        // Eğer bu mesaj daha önce işlendiyse atla
+        if (lastKnownChatMessages[change.doc.id] == currentKey) continue;
+        lastKnownChatMessages[change.doc.id] = currentKey;
 
-        final messageKey = "${change.doc.id}_${messageDate.millisecondsSinceEpoch}_$lastMessage";
-        if (_processedMessageKeys.contains(messageKey)) continue;
-        _processedMessageKeys.add(messageKey);
-
-        // Uygulama açılışından önceki eski mesajlar için bildirim patlatma
-        if (messageDate.isBefore(_serviceStartTime)) continue;
+        // Kullanıcı şu an zaten bu sohbetteyse bildirim gösterme
+        if (activeChatRoomId != null && activeChatRoomId == change.doc.id) continue;
 
         // Gönderen motorcu bilgilerini topla
         final pData = data['participantData'] as Map<String, dynamic>? ?? {};
@@ -106,42 +120,54 @@ class NotificationService {
           imageUrls: (senderPhoto != null && senderPhoto.isNotEmpty) ? [senderPhoto] : [],
         );
 
-        // Dokunsal titreşim ile anında üstten bildirim fırlat
+        // 1. Dokunsal güçlü titreşim
         HapticFeedback.heavyImpact();
+
+        // 2. Uygulama içi şık Neumorphic Banner fırlat
         emitMessageNotification(
           fromNickname: senderNickname,
           messageText: lastMessage,
           senderUser: senderUser,
         );
+
+        // 3. Cihaz durum çubuğu (Status Bar) Sistem Bildirimi fırlat!
+        PushNotificationService().showLocalNotification(
+          id: change.doc.id.hashCode,
+          title: "💬 $senderNickname",
+          body: lastMessage,
+          payload: change.doc.id,
+        );
       }
     }, onError: (e) => debugPrint("Chat listener error: $e"));
 
     // 2. GELEN SELEKTÖR & SÜPER SELEKTÖR SİNYALLERİNİ DİNLE
+    bool isInitialSignalSnapshot = true;
+    final Set<String> knownSignalIds = {};
+
     _signalSubscription = FirebaseFirestore.instance
         .collection('signals')
         .where('toUserId', isEqualTo: currentUser.id)
         .snapshots()
         .listen((snapshot) {
+      if (isInitialSignalSnapshot) {
+        for (final doc in snapshot.docs) {
+          knownSignalIds.add(doc.id);
+        }
+        isInitialSignalSnapshot = false;
+        return;
+      }
+
       for (final change in snapshot.docChanges) {
         if (change.type != DocumentChangeType.added) continue;
         final data = change.doc.data();
         if (data == null) continue;
 
+        if (knownSignalIds.contains(change.doc.id)) continue;
+        knownSignalIds.add(change.doc.id);
+
         final fromUserId = data['fromUserId'] as String? ?? '';
         final fromNickname = data['fromNickname'] as String? ?? 'Bir Sürücü';
         final isSuper = data['isSuperSignal'] == true;
-        final signalTime = data['timestamp'];
-
-        DateTime sDate = DateTime.now();
-        if (signalTime is Timestamp) {
-          sDate = signalTime.toDate();
-        }
-
-        final signalKey = "sig_${change.doc.id}";
-        if (_processedMessageKeys.contains(signalKey)) continue;
-        _processedMessageKeys.add(signalKey);
-
-        if (sDate.isBefore(_serviceStartTime)) continue;
 
         final senderUser = MotoUser(
           id: fromUserId,
@@ -159,25 +185,51 @@ class NotificationService {
             fromNickname: fromNickname,
             senderUser: senderUser,
           );
+          PushNotificationService().showLocalNotification(
+            id: change.doc.id.hashCode,
+            title: "⭐ SÜPER SELEKTÖR!",
+            body: "$fromNickname sana SÜPER SELEKTÖR attı! 🔥",
+            payload: fromUserId,
+          );
         } else {
           emitSignalNotification(
             fromNickname: fromNickname,
             senderUser: senderUser,
+          );
+          PushNotificationService().showLocalNotification(
+            id: change.doc.id.hashCode,
+            title: "⚡ Selektör Aldın!",
+            body: "$fromNickname sana selektör attı. Beraber turlamak istiyor!",
+            payload: fromUserId,
           );
         }
       }
     }, onError: (e) => debugPrint("Signal listener error: $e"));
 
     // 3. YAKINDAKİ ACİL S.O.S. ALERTLERİNİ DİNLE
+    bool isInitialSosSnapshot = true;
+    final Set<String> knownSosIds = {};
+
     _sosSubscription = FirebaseFirestore.instance
         .collection('sos_alerts')
         .where('isActive', isEqualTo: true)
         .snapshots()
         .listen((snapshot) {
+      if (isInitialSosSnapshot) {
+        for (final doc in snapshot.docs) {
+          knownSosIds.add(doc.id);
+        }
+        isInitialSosSnapshot = false;
+        return;
+      }
+
       for (final change in snapshot.docChanges) {
         if (change.type != DocumentChangeType.added) continue;
         final data = change.doc.data();
         if (data == null) continue;
+
+        if (knownSosIds.contains(change.doc.id)) continue;
+        knownSosIds.add(change.doc.id);
 
         final creatorId = data['userId'] as String? ?? '';
         if (creatorId == currentUser.id) continue;
@@ -185,24 +237,18 @@ class NotificationService {
         final creatorNickname = data['userNickname'] as String? ?? 'Bir Motorcu';
         final sosType = data['sosType'] as String? ?? 'Yolda Kaldım';
         final locationName = data['locationName'] as String? ?? 'Yakın Konum';
-        final createdAt = data['createdAt'];
-
-        DateTime cDate = DateTime.now();
-        if (createdAt is Timestamp) {
-          cDate = createdAt.toDate();
-        }
-
-        final sosKey = "sos_${change.doc.id}";
-        if (_processedMessageKeys.contains(sosKey)) continue;
-        _processedMessageKeys.add(sosKey);
-
-        if (cDate.isBefore(_serviceStartTime)) continue;
 
         HapticFeedback.heavyImpact();
         emitSosNotification(
           senderNickname: creatorNickname,
           sosType: sosType,
           locationName: locationName,
+        );
+        PushNotificationService().showLocalNotification(
+          id: change.doc.id.hashCode,
+          title: "🆘 ACİL DURUM: $sosType!",
+          body: "$creatorNickname ($locationName) yolda yardım bekliyor!",
+          payload: change.doc.id,
         );
       }
     }, onError: (e) => debugPrint("SOS listener error: $e"));
@@ -216,6 +262,7 @@ class NotificationService {
     _signalSubscription = null;
     _sosSubscription = null;
     _listeningUserId = null;
+    _processedMessageKeys.clear();
   }
 
   /// Yeni uygulama içi bildirim yayınla
@@ -261,7 +308,7 @@ class NotificationService {
     );
   }
 
-  /// Yeni mesaj bildirimi tetikle (Gizlilik korumalı - Mesaj metni bildirimde gösterilmez)
+  /// Yeni mesaj bildirimi tetikle (Gerçek mesaj önizlemesi ve anında bildirim)
   void emitMessageNotification({
     required String fromNickname,
     String? messageText,
@@ -272,7 +319,9 @@ class NotificationService {
         id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
         type: NotificationType.message,
         title: "💬 $fromNickname",
-        message: "Bir mesaj bekleyeniniz var. Okumak için dokunun.",
+        message: (messageText != null && messageText.isNotEmpty)
+            ? messageText
+            : "Yeni bir mesajınız var. Okumak için dokunun.",
         senderId: senderUser.id,
         senderNickname: fromNickname,
         senderPhoto: senderUser.imageUrls.isNotEmpty ? senderUser.imageUrls[0] : null,

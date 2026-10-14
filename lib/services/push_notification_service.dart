@@ -110,6 +110,47 @@ class PushNotificationService {
     }
   }
 
+  /// Doğrudan yerel sistem bildirimi fırlatır (Sohbet ve Sinyaller için)
+  Future<void> showLocalNotification({
+    required int id,
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    if (kIsWeb) return;
+    try {
+      const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+        'motoconnect_high_importance_channel',
+        'High Importance Notifications',
+        channelDescription: 'Bu kanal MotoConnect sohbet ve sürüş bildirimleri için kullanılır.',
+        importance: Importance.max,
+        priority: Priority.high,
+        icon: '@mipmap/ic_launcher',
+        playSound: true,
+        enableVibration: true,
+      );
+      const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+      const NotificationDetails details = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
+
+      await _localNotifications.show(
+        id: id,
+        title: title,
+        body: body,
+        notificationDetails: details,
+        payload: payload,
+      );
+    } catch (e) {
+      debugPrint("showLocalNotification error: $e");
+    }
+  }
+
   /// Kullanıcının FCM Token'ını alır ve Firestore'a kaydeder.
   Future<void> saveTokenToDatabase(String userId) async {
     if (kIsWeb) return;

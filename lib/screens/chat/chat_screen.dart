@@ -4,6 +4,7 @@ import '../../models/user_model.dart';
 import '../../models/chat_model.dart';
 import '../../services/firestore_service.dart';
 import '../../services/safety_filter_service.dart';
+import '../../services/notification_service.dart';
 import '../../widgets/moderation_sheets.dart';
 import '../../widgets/neumorphic_widgets.dart';
 
@@ -32,10 +33,14 @@ class _SohbetEkraniState extends State<SohbetEkrani> {
   void initState() {
     super.initState();
     _chatRoomId = FirestoreService.getChatRoomId(widget.aktifKullanici.id, widget.eslesilenKisi.id);
+    NotificationService().activeChatRoomId = _chatRoomId;
   }
 
   @override
   void dispose() {
+    if (NotificationService().activeChatRoomId == _chatRoomId) {
+      NotificationService().activeChatRoomId = null;
+    }
     _spamTimer?.cancel();
     _mesajController.dispose();
     _scrollController.dispose();
